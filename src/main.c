@@ -7,82 +7,42 @@
 #define SDL_MAIN_HANDLED 
 #include <SDL2/SDL.h>
 
+#include "display.h"
+#include "vector.h"
+
+#define POINT_COUNT (9 * 9 *9) // 9x9x9 cube.
+vec3_t cube_points[POINT_COUNT];
+vec2_t projected_points[POINT_COUNT];
+
+vec3_t camera_position = {.x = 0, .y= 0, .z =-5};
+float fov_factor = 640;
 bool is_running = false;
-const bool is_fullscreen = false;
 
-
-SDL_Window* window = NULL;
-SDL_Renderer* renderer = NULL;
-SDL_Texture* color_buffer_texture = NULL;
-
-
-uint32_t* color_buffer = NULL;
-int WINDOW_WIDTH = 800;
-int WINDOW_HEIGHT = 600;
-
-
-//@NOTE(SMIA): empty args means you can call this function with varargs..
-bool initialize_window(void) {
-    if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
-        fprintf(stderr, "SDL_Init failed.");
-        return false;
-    }
-
-    // use sdl to query what is the fullscreen max width and height
-    SDL_DisplayMode display_mode;
-    SDL_GetCurrentDisplayMode(0, &display_mode);
-
-    int max_window_width = display_mode.w;
-    int max_window_height = display_mode.h;
-
-    int window_width = WINDOW_WIDTH;
-    int window_height = WINDOW_HEIGHT;
-    if (is_fullscreen){
-        window_width = max_window_width;
-        window_height = max_window_height;
-    }
-    // create SDL window.
-    window = SDL_CreateWindow(
-        NULL,
-        SDL_WINDOWPOS_CENTERED,
-        SDL_WINDOWPOS_CENTERED,
-        window_width,
-        window_height,
-        SDL_WINDOW_BORDERLESS
-    );
-
-    if (!window) {
-        fprintf(stderr, "Error creating window.");
-        return false;
-    }
-
-    renderer = SDL_CreateRenderer(
-        window,
-        -1, // I don't care: get the first display device.
-        0
-    );
-    if (!renderer) {
-        fprintf(stderr, "Error creating window.");
-    }
-    if (is_fullscreen)
-    {
-        SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
-    }
-
-    return true;
-}
 
 void setup() {
     // allocate the required bytes.
-    color_buffer = (uint32_t*)malloc(sizeof(uint32_t) * WINDOW_WIDTH * WINDOW_HEIGHT);
+    color_buffer = (uint32_t*)malloc(sizeof(uint32_t) * window_width * window_height);
 
     color_buffer_texture = SDL_CreateTexture(
         renderer,
         SDL_PIXELFORMAT_ARGB8888,
         SDL_TEXTUREACCESS_STREAMING,
-        WINDOW_WIDTH,
-        WINDOW_HEIGHT
+        window_width,
+        window_height
     );
+
+    // start loading my array of vectors.
+    // from -1 to 1 (in this 9x9x9 cube)
+    int point_count = 0;
+    for (float x = -1; x <= 1; x += 0.25) {
+        for (float y= -1; y <= 1; y += 0.25) {
+            for (float z = -1; z <= 1; z += 0.25) {
+                vec3_t new_point = {.x = x, .y = y, .z = z};
+                cube_points[point_count] = new_point;
+                point_count += 1;
+            }
+        }
+    }
 
 }
 void process_input() {
@@ -108,95 +68,54 @@ void process_input() {
             break;
 
     }
-
 }
+
+vec2_t project(vec3_t point) {
+    vec2_t projected_point = {.x = (fov_factor *point.x) / point.z, .y = (fov_factor *point.y) / point.z};
+    return projected_point;
+}
+
 void update() {
     // assert(false && "NOT IMPLEMENTED!");
+    for (int point_idx = 0; point_idx < POINT_COUNT; ++point_idx) {
+        vec3_t point = cube_points[point_idx];
 
-}
-
-void clear_color_buffer(uint32_t color) {
-
-    for (int y = 0; y < WINDOW_HEIGHT; ++y){
-        for (int x =0; x < WINDOW_WIDTH; ++x) {
-            color_buffer[(WINDOW_WIDTH * y) + x] = color;
-        }
-    }
-
-}
-
-// copy the color_buffer to the color_buffer_texture
-void render_color_buffer() {
-    SDL_UpdateTexture(
-        color_buffer_texture,
-        NULL,
-        color_buffer,
-        (int)(WINDOW_WIDTH * sizeof(uint32_t))
-    );
-    SDL_RenderCopy(renderer, color_buffer_texture, NULL, NULL);
-}
-
-void draw_rect(int start_x, int start_y, int width, int height, uint32_t color) {
-    assert(start_y + height < WINDOW_HEIGHT);
-    assert(start_x + width < WINDOW_WIDTH);
-
-    for (int y = start_y; y < start_y + height; ++y) {
-        for (int x = start_x; x < start_x + width; ++x) {
-            color_buffer[(WINDOW_WIDTH * y) + x] = color;
-        }
+        // move the points away from the camera.
+        point.z -= camera_position.z;
+        // project the current point and save it in the array of projected points.
+        vec2_t projected_point = project(point);
+        projected_points[point_idx] = projected_point;
     }
 }
-
-void draw_grid() {
-
-    // @NOTE: actual solution:
-    for (int y = 0; y  < WINDOW_HEIGHT; ++y) {
-        for (int x = 0; x < WINDOW_WIDTH; ++x) {
-            if (x % 10 == 0 || y% 10 == 0) {
-                color_buffer[(WINDOW_WIDTH * y) + x] = 0x0f333333;
-            }
-        }
-    }
-    
-    // my solution:
-    // horizontal lines.
-    // for (int y = 0; y < WINDOW_HEIGHT; y+= 10) {
-    //     for (int x =0; x < WINDOW_WIDTH; ++x) {
-    //         color_buffer[(WINDOW_WIDTH * y) + x] = 0x0f333333;
-    //     }
-    // }
-    // // vertical lines.
-    // for (int y = 0; y < WINDOW_HEIGHT; ++y) {
-    //     for (int x =0; x < WINDOW_WIDTH; x+= 10) {
-    //         color_buffer[(WINDOW_WIDTH * y) + x] = 0x0f0a0a0a;
-    //     }
-    // }
-}
-
 
 void render(void) {
     SDL_SetRenderDrawColor(renderer, 255, 0, 0, 0);
     SDL_RenderClear(renderer);
 
     draw_grid();
-    draw_rect(300, 200, 300, 150, 0xFFFF00FF);
+    // draw_rect(300, 200, 300, 150, 0xFFFF00FF);
+
+    for (int point_idx = 0; point_idx < POINT_COUNT; ++point_idx) {
+        vec2_t projected_point = projected_points[point_idx];
+        draw_rect(
+            projected_point.x + (window_width / 2),
+            projected_point.y + (window_height / 2),
+            4, 
+            4,
+            0xFFFFFF00);
+    }
+
     render_color_buffer();
     clear_color_buffer(0xff000000);
 
     SDL_RenderPresent(renderer);
 }
 
-void destroy_window(void) {
-    free(color_buffer);
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
-}
-
 int main(int argc, char *argv[]) {
-    // TODO: create an SDL window.
+    // create an SDL window.
     is_running = initialize_window();
     setup();
+
 
     while(is_running) {
         process_input();
