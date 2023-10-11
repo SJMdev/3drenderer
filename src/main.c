@@ -15,6 +15,8 @@ vec3_t cube_points[POINT_COUNT];
 vec2_t projected_points[POINT_COUNT];
 
 vec3_t camera_position = {.x = 0, .y= 0, .z =-5};
+vec3_t cube_rotation = {.x = 0, .y = 0, .z = 0};
+
 float fov_factor = 640;
 bool is_running = false;
 
@@ -76,14 +78,24 @@ vec2_t project(vec3_t point) {
 }
 
 void update() {
+    cube_rotation.x += 0.001;
+    cube_rotation.y += 0.001;
+    cube_rotation.z += 0.001;
+
     // assert(false && "NOT IMPLEMENTED!");
     for (int point_idx = 0; point_idx < POINT_COUNT; ++point_idx) {
         vec3_t point = cube_points[point_idx];
 
-        // move the points away from the camera.
-        point.z -= camera_position.z;
+        vec3_t transformed_point = vec3_rotate_x(point, cube_rotation.x);
+        transformed_point = vec3_rotate_y(transformed_point, cube_rotation.y);
+        transformed_point = vec3_rotate_z(transformed_point, cube_rotation.z);
+
+
+        // translate the points away from the camera.
+        transformed_point.z -= camera_position.z;
         // project the current point and save it in the array of projected points.
-        vec2_t projected_point = project(point);
+        vec2_t projected_point = project(transformed_point);
+
         projected_points[point_idx] = projected_point;
     }
 }
@@ -110,6 +122,13 @@ void render(void) {
 
     SDL_RenderPresent(renderer);
 }
+
+void transform_points() {
+    // rotate
+    // scale
+    // translate
+}
+
 
 int main(int argc, char *argv[]) {
     // create an SDL window.
