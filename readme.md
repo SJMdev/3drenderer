@@ -1,0 +1,1 @@
+# also ADD SDL2.dll to the linker and not only SDL2.lib? wtf?
