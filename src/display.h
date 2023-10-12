@@ -7,6 +7,9 @@
 
 #include <SDL2/SDL.h>
 
+#define FPS 120
+#define FRAME_TARGET_TIME_MS (1000 / FPS)
+
 
 extern SDL_Window* window;
 extern SDL_Renderer* renderer;
