@@ -108,7 +108,7 @@ void load_obj_file_data(char* filename) {
 
 
         } else {
-            printf("Failed to parse the line: %s\n", line);
+            // printf("Failed to parse the line: %s\n", line);
         }
     }
 

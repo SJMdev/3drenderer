@@ -36,6 +36,14 @@ void setup() {
 
     // loads the cube values in the mesh data structure
     load_obj_file_data("assets/f22.obj");
+
+    vec3_t a = {2.5f, 6.4f, 3.0f};
+    vec3_t b = {-2.2f, 1.4f, -1.0f};
+
+    float a_length = vec3_length(a);
+    float b_length = vec3_length(b);
+
+    fprintf(stderr, "length a: %f, length b: %f", a_length, b_length);
 }
 void process_input() {
     SDL_Event event;
