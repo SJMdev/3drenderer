@@ -16,7 +16,7 @@ vec2_t vec2_add(vec2_t lhs, vec2_t rhs);
 vec2_t vec2_div(vec2_t lhs, float scalar);
 vec2_t vec2_mul(vec2_t lhs, float scalar);
 vec2_t vec2_sub(vec2_t lhs, vec2_t rhs);
-vec2_t vec2_dot(vect_2 lhs, vec2_t rhs);
+float vec2_dot(vec2_t lhs, vec2_t rhs);
     
 float vec3_length(vec3_t v);
 vec3_t vec3_add(vec3_t lhs, vec3_t rhs);
