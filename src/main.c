@@ -15,8 +15,7 @@
 
 triangle_t* triangles_to_render = NULL;
 
-vec3_t camera_position = {.x = 0, .y= 0, .z =-5};
-vec3_t cube_rotation = {.x = 0, .y = 0, .z = 0};
+vec3_t camera_position = {.x = 0, .y= 0, .z = 0};
 
 float fov_factor = 640;
 bool is_running = false;
@@ -35,7 +34,7 @@ void setup() {
     );
 
     // loads the cube values in the mesh data structure
-    load_obj_file_data("assets/f22.obj");
+    load_obj_file_data("assets/cube.obj");
 
     vec3_t a = {2.5f, 6.4f, 3.0f};
     vec3_t b = {-2.2f, 1.4f, -1.0f};
@@ -89,33 +88,58 @@ void update() {
     // initialize he array of triangles to render
     triangles_to_render = NULL; // uh, are we not leaking?
 
-    cube_rotation.x += 0.001;
-    cube_rotation.y += 0.001;
-    cube_rotation.z += 0.001;
+    mesh.rotation.x += 0.01;
+    mesh.rotation.y += 0.01;
+    mesh.rotation.z += 0.02;
 
     int face_count = array_length(mesh.faces);
-
     // loop over faces
     for (int face_idx = 0; face_idx < face_count; ++face_idx) {
         face_t mesh_face = mesh.faces[face_idx];
+
         vec3_t face_vertices[3];
         face_vertices[0] = mesh.vertices[mesh_face.a - 1]; // index displacement because face thing.
         face_vertices[1] = mesh.vertices[mesh_face.b - 1];
         face_vertices[2] = mesh.vertices[mesh_face.c - 1];
 
-        triangle_t projected_triangle= {0};
+        vec3_t transformed_vertices[3]; 
+
         // for all three vertices 
         for (int vertex_idx = 0; vertex_idx <3; ++vertex_idx){
             vec3_t transformed_vertex = face_vertices[vertex_idx];
-            transformed_vertex = vec3_rotate_x(transformed_vertex, cube_rotation.x);
-            transformed_vertex = vec3_rotate_y(transformed_vertex, cube_rotation.y);
-            transformed_vertex = vec3_rotate_z(transformed_vertex, cube_rotation.z); //
+
+            transformed_vertex = vec3_rotate_x(transformed_vertex, mesh.rotation.x);
+            transformed_vertex = vec3_rotate_y(transformed_vertex, mesh.rotation.y);
+            transformed_vertex = vec3_rotate_z(transformed_vertex, mesh.rotation.z); //
 
             // translate the vertex away from the camera.
-            transformed_vertex.z -= camera_position.z;
+            transformed_vertex.z += 5;
 
-            // project the current vertex.
-            vec2_t projected_point = project(transformed_vertex);
+            transformed_vertices[vertex_idx]  = transformed_vertex;
+        }
+
+        // backface culling.
+        vec3_t a = transformed_vertices[0];
+        vec3_t b = transformed_vertices[1];
+        vec3_t c = transformed_vertices[2];
+
+        vec3_t b_minus_a = vec3_sub(b, a);
+        vec3_t c_minus_a = vec3_sub(c, a);
+        // calculate the normal of the face
+        vec3_t normal = vec3_cross(b_minus_a, c_minus_a);
+        // calculate ray vector
+        vec3_t camera_ray_vector = vec3_sub(camera_position, a);
+        // calculate how aligned the camera ray is with the face normal
+        float dot_normal_camera = vec3_dot(normal, camera_ray_vector);
+
+        if (dot_normal_camera < 0) {
+            continue;
+        }
+
+        triangle_t projected_triangle= {0};
+
+        for (int vertex_idx = 0; vertex_idx < 3; ++vertex_idx) {
+            vec2_t projected_point = project(transformed_vertices[vertex_idx]);
             // scale and translate the projected points to the middle of the screen.
             projected_point.x += (window_width  / 2);
             projected_point.y += (window_height / 2);
@@ -133,8 +157,8 @@ void update() {
 }
 
 void render(void) {
-    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 0);
-    SDL_RenderClear(renderer);
+    // SDL_SetRenderDrawColor(renderer, 255, 0, 0, 0);
+    // SDL_RenderClear(renderer);
 
     draw_grid();
 

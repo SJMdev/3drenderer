@@ -97,8 +97,16 @@ void draw_line(int x0, int y0, int x1, int y1, uint32_t color) {
 
 }
 void draw_pixel(int x, int y, uint32_t color) {
-    assert(x > 0 && y > 0);
-    assert(x < window_width && y < window_height);
+    if (x < 0 && y < 0) {
+        fprintf(stderr, "drawing outside bounds at: x:%d, y:%d\n", x , y);
+        // assert(x > 0 && y > 0);
+        return;
+    }
+    if (x > window_width && y > window_height) {
+        fprintf(stderr, "drawing outside bounds at: x:%d, y:%d\n", x , y);
+        // assert(x < window_width && y < window_height);
+        return;
+    }
     color_buffer[(window_width * y) + x] = color;
 }
 
