@@ -12,6 +12,19 @@
 #include "vector.h"
 #include "mesh.h"
 
+//@NOTE(SJM): we can do the enum trick? << 0, << 1, etc.
+
+enum RENDER_MODE render_mode = RENDER_MODE_FILLED_WITH_WIREFRAME;
+enum CULL_MODE cull_mode = CULL_BACKFACE;
+
+// Pressing “1” displays the wireframe and a small red dot for each triangle vertex
+// Pressing “2” displays only the wireframe lines
+// Pressing “3” displays filled triangles with a solid color
+// Pressing “4” displays both filled triangles and wireframe lines
+// Pressing “c” we should enable back-face culling
+// Pressing “d” we should disable the back-face culling
+
+
 
 triangle_t* triangles_to_render = NULL;
 
@@ -59,6 +72,26 @@ void process_input() {
             if (event.key.keysym.sym == SDLK_ESCAPE){
                 is_running = false;
                 break;
+            }
+
+            if (event.key.keysym.sym == SDLK_1) {
+                render_mode = RENDER_MODE_WIREFRAME_WITH_VERTICES;
+            }   
+
+            if (event.key.keysym.sym == SDLK_2) {
+                render_mode = RENDER_MODE_WIREFRAME;
+            }
+            if (event.key.keysym.sym == SDLK_3) {
+                render_mode = RENDER_MODE_FILLED_WITH_WIREFRAME;
+            }
+            if (event.key.keysym.sym == SDLK_4) {
+                render_mode = RENDER_MODE_FILLED;
+            }
+            if (event.key.keysym.sym == SDLK_c) {
+                cull_mode = CULL_BACKFACE;
+            }
+            if (event.key.keysym.sym == SDLK_b) {
+                cull_mode = CULL_NONE;
             }
         }
 
@@ -125,14 +158,20 @@ void update() {
 
         vec3_t b_minus_a = vec3_sub(b, a);
         vec3_t c_minus_a = vec3_sub(c, a);
+        vec3_normalize(&b_minus_a);
+        vec3_normalize(&c_minus_a);
+
         // calculate the normal of the face
         vec3_t normal = vec3_cross(b_minus_a, c_minus_a);
+        // normalize the normal
+        vec3_normalize(&normal);
+        
         // calculate ray vector
         vec3_t camera_ray_vector = vec3_sub(camera_position, a);
         // calculate how aligned the camera ray is with the face normal
         float dot_normal_camera = vec3_dot(normal, camera_ray_vector);
 
-        if (dot_normal_camera < 0) {
+        if (dot_normal_camera < 0 && (cull_mode == CULL_BACKFACE)) {
             continue;
         }
 
@@ -164,20 +203,42 @@ void render(void) {
 
     int triangle_count = array_length(triangles_to_render);
     // loop over all projected triangles and render them.
+
+    //@SPEED: this evaluates render_mode linear amount of times for the number of triangles.
+    // not really necessary, but otherwise there is some ugly code duplication.
     for (int triangle_idx = 0; triangle_idx < triangle_count; ++triangle_idx) {
         triangle_t triangle = triangles_to_render[triangle_idx];
-        draw_rect(triangle.points[0].x, triangle.points[0].y, 3, 3, 0xFFFFFF00);
-        draw_rect(triangle.points[1].x, triangle.points[1].y, 3, 3, 0xFFFFFF00);
-        draw_rect(triangle.points[2].x, triangle.points[2].y, 3, 3, 0xFFFFFF00);
 
-        draw_triangle(
-            triangle.points[0].x,
-            triangle.points[0].y,
-            triangle.points[1].x,
-            triangle.points[1].y,
-            triangle.points[2].x,
-            triangle.points[2].y,
-            0xFF00FF00);
+        // filled
+        if (render_mode == RENDER_MODE_FILLED || render_mode == RENDER_MODE_FILLED_WITH_WIREFRAME) {
+            draw_filled_triangle(
+                triangle.points[0].x,
+                triangle.points[0].y,
+                triangle.points[1].x,
+                triangle.points[1].y,
+                triangle.points[2].x,
+                triangle.points[2].y,
+                0xFFFFFFFF);
+        }
+        // wireframe
+        if (render_mode == RENDER_MODE_FILLED_WITH_WIREFRAME ||  render_mode == RENDER_MODE_WIREFRAME || render_mode == RENDER_MODE_WIREFRAME_WITH_VERTICES) {
+            draw_triangle(
+                        triangle.points[0].x,
+                        triangle.points[0].y,
+                        triangle.points[1].x,
+                        triangle.points[1].y,
+                        triangle.points[2].x,
+                        triangle.points[2].y,
+                        0xFF00FF00);
+        }
+
+        if (render_mode == RENDER_MODE_WIREFRAME_WITH_VERTICES) {
+            draw_rect(triangle.points[0].x - 3, triangle.points[0].y - 3, 6, 6, 0xFFFF0000);
+            draw_rect(triangle.points[1].x - 3, triangle.points[1].y - 3, 6, 6, 0xFFFF0000);
+            draw_rect(triangle.points[2].x - 3, triangle.points[2].y - 3, 6, 6, 0xFFFF0000);
+        }
+
+
     }
 
     // clear the array of triangles to render every frame loop

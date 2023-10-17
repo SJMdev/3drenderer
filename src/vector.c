@@ -46,6 +46,13 @@ float vec2_dot(vec2_t lhs, vec2_t rhs) {
     return result;
 }
 
+void vec2_normalize(vec2_t* v) {
+    float length = vec2_length(*v);
+    v->x = v->x / length;
+    v->y = v->y / length;
+}
+
+//-----------------------------------------
 // implementations of 3D Vector functions
 float vec3_length(vec3_t v) {
     float result = sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
@@ -105,6 +112,16 @@ vec3_t vec3_cross(vec3_t lhs, vec3_t rhs) {
 
     return result;
 }
+
+void vec3_normalize(vec3_t* v)
+{
+    float length = vec3_length(*v);
+    v->x = v->x / length;
+    v->y = v->y / length;
+    v->z = v->z / length;
+
+}
+
 
 
 vec3_t vec3_rotate_z(vec3_t v, float angle) {

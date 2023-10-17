@@ -20,10 +20,24 @@ extern int window_height;
 extern int DEFAULT_WINDOW_WIDTH;
 extern int DEFAULT_WINDOW_HEIGHT;
 
-
 extern bool is_fullscreen;
 
+enum RENDER_MODE {
+    RENDER_MODE_UNUSED = 0,
+    RENDER_MODE_WIREFRAME_WITH_VERTICES, // 1
+    RENDER_MODE_WIREFRAME, // 2
+    RENDER_MODE_FILLED, // 3
+    RENDER_MODE_FILLED_WITH_WIREFRAME  // 4
+};
+
+enum CULL_MODE {
+    CULL_NONE,
+    CULL_BACKFACE
+};
+
 bool initialize_window(void);
+
+
 void draw_grid(void);
 void draw_line(int x0, int y0, int x1, int y1, uint32_t color);
 void draw_pixel(int x, int y, uint32_t color);
