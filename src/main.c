@@ -39,7 +39,7 @@ void setup() {
     color_buffer = (uint32_t*)malloc(sizeof(uint32_t) * window_width * window_height);
 
     color_buffer_texture = SDL_CreateTexture(
-        renderer,
+        renderer, 
         SDL_PIXELFORMAT_ARGB8888,
         SDL_TEXTUREACCESS_STREAMING,
         window_width,
@@ -47,16 +47,11 @@ void setup() {
     );
 
     // loads the cube values in the mesh data structure
-    load_obj_file_data("assets/cube.obj");
+    load_cube_mesh_data();
+    //load_obj_file_data("assets/cube.obj");
 
-    vec3_t a = {2.5f, 6.4f, 3.0f};
-    vec3_t b = {-2.2f, 1.4f, -1.0f};
-
-    float a_length = vec3_length(a);
-    float b_length = vec3_length(b);
-
-    fprintf(stderr, "length a: %f, length b: %f", a_length, b_length);
 }
+
 void process_input() {
     SDL_Event event;
     SDL_PollEvent(&event);
@@ -175,23 +170,49 @@ void update() {
             continue;
         }
 
-        triangle_t projected_triangle= {0};
+
+        vec2_t projected_points[3];
 
         for (int vertex_idx = 0; vertex_idx < 3; ++vertex_idx) {
-            vec2_t projected_point = project(transformed_vertices[vertex_idx]);
+            projected_points[vertex_idx] = project(transformed_vertices[vertex_idx]);
             // scale and translate the projected points to the middle of the screen.
-            projected_point.x += (window_width  / 2);
-            projected_point.y += (window_height / 2);
+            projected_points[vertex_idx].x += (window_width  / 2);
+            projected_points[vertex_idx].y += (window_height / 2);
 
-            projected_triangle.points[vertex_idx] = projected_point;
         }
+
+        // calculate the average depth for each face based on the vertices after transformation.
+        float average_depth = (transformed_vertices[0].z + transformed_vertices[1].z + transformed_vertices[2].z) / 3.0;
+
+        triangle_t projected_triangle= {
+            .points = {
+                {projected_points[0].x, projected_points[0].y},
+                {projected_points[1].x,  projected_points[1].y},
+                {projected_points[2].x,  projected_points[2].y},
+            },
+            .color = mesh_face.color,
+            .average_depth = average_depth
+        };
 
         // save the projected triangle in the array of triangles to render.
         // triangles_to_render[face_idx] = projected_triangle;
         array_push(triangles_to_render, projected_triangle);
     }
 
+    // Painter's algorithm:
+    // sort the triangles to render by their average_depth
+    int triangle_count = array_length(triangles_to_render);
 
+    for(int idx = 0; idx != triangle_count; ++idx) {
+        for (int jdx = idx; jdx != triangle_count; ++jdx) {
+            // idx is "nearer" than jdx: swap them.
+            if (triangles_to_render[idx].average_depth < triangles_to_render[jdx].average_depth) {
+                triangle_t temp = triangles_to_render[idx];
+                triangles_to_render[idx] = triangles_to_render[jdx];
+                triangles_to_render[jdx] = temp;
+            }
+        }
+    }
 
 }
 
@@ -218,7 +239,7 @@ void render(void) {
                 triangle.points[1].y,
                 triangle.points[2].x,
                 triangle.points[2].y,
-                0xFFFFFFFF);
+                triangle.color);
         }
         // wireframe
         if (render_mode == RENDER_MODE_FILLED_WITH_WIREFRAME ||  render_mode == RENDER_MODE_WIREFRAME || render_mode == RENDER_MODE_WIREFRAME_WITH_VERTICES) {
