@@ -11,6 +11,7 @@
 #include "display.h"
 #include "vector.h"
 #include "mesh.h"
+#include "matrix.h"
 
 //@NOTE(SJM): we can do the enum trick? << 0, << 1, etc.
 
@@ -113,12 +114,32 @@ void update() {
     // how many miliseconds have passed since the last frame?
     previous_frame_time = SDL_GetTicks();
 
-    // initialize he array of triangles to render
+    // initialize the array of triangles to render
     triangles_to_render = NULL; // uh, are we not leaking?
 
+    // change the mesh scale /rotation values per animation frame.
     mesh.rotation.x += 0.01;
     mesh.rotation.y += 0.01;
     mesh.rotation.z += 0.02;
+
+    // mesh.scale.x += 0.0002;
+    // mesh.scale.y += 0.0002;
+    // translate the vertex away from the camera.
+    mesh.translation.x += 0.001;
+    mesh.translation.z = 5.0;
+
+    mat4_t translation_matrix = mat4_make_translate(mesh.translation.x, mesh.translation.y, mesh.translation.z);
+    mat4_t scale_matrix = mat4_make_scale(mesh.scale.x, mesh.scale.y, mesh.scale.z);
+    mat4_t rotation_matrix_x = mat4_make_rotation_x(
+        mesh.rotation.x
+    );
+    mat4_t rotation_matrix_y = mat4_make_rotation_y(
+        mesh.rotation.y
+    );
+    mat4_t rotation_matrix_z = mat4_make_rotation_z(
+        mesh.rotation.z
+    );
+
 
     int face_count = array_length(mesh.faces);
     // loop over faces
@@ -126,30 +147,33 @@ void update() {
         face_t mesh_face = mesh.faces[face_idx];
 
         vec3_t face_vertices[3];
-        face_vertices[0] = mesh.vertices[mesh_face.a - 1]; // index displacement because face thing.
+        face_vertices[0] = mesh.vertices[mesh_face.a - 1]; // index displacement because indices come straight from obj file (which start at 1).
         face_vertices[1] = mesh.vertices[mesh_face.b - 1];
         face_vertices[2] = mesh.vertices[mesh_face.c - 1];
 
-        vec3_t transformed_vertices[3]; 
+        vec4_t transformed_vertices[3]; 
 
         // for all three vertices 
         for (int vertex_idx = 0; vertex_idx <3; ++vertex_idx){
-            vec3_t transformed_vertex = face_vertices[vertex_idx];
+            vec4_t transformed_vertex = vec4_from_vec3(face_vertices[vertex_idx]);
 
-            transformed_vertex = vec3_rotate_x(transformed_vertex, mesh.rotation.x);
-            transformed_vertex = vec3_rotate_y(transformed_vertex, mesh.rotation.y);
-            transformed_vertex = vec3_rotate_z(transformed_vertex, mesh.rotation.z); //
-
-            // translate the vertex away from the camera.
-            transformed_vertex.z += 5;
+            // multiply the scale matrix by the vertex.
+            transformed_vertex =  mat4_mul_vec4(scale_matrix, transformed_vertex);
+            // todo: use a matrix to scale our original vertex.
+            transformed_vertex = mat4_mul_vec4(rotation_matrix_x, transformed_vertex);
+            transformed_vertex = mat4_mul_vec4(rotation_matrix_y, transformed_vertex);
+            transformed_vertex = mat4_mul_vec4(rotation_matrix_z, transformed_vertex); //y
+            
+            transformed_vertex =  mat4_mul_vec4(translation_matrix, transformed_vertex);
+            
 
             transformed_vertices[vertex_idx]  = transformed_vertex;
         }
 
         // backface culling.
-        vec3_t a = transformed_vertices[0];
-        vec3_t b = transformed_vertices[1];
-        vec3_t c = transformed_vertices[2];
+        vec3_t a = vec3_from_vec4(transformed_vertices[0]);
+        vec3_t b = vec3_from_vec4(transformed_vertices[1]);
+        vec3_t c = vec3_from_vec4(transformed_vertices[2]);
 
         vec3_t b_minus_a = vec3_sub(b, a);
         vec3_t c_minus_a = vec3_sub(c, a);
@@ -174,7 +198,7 @@ void update() {
         vec2_t projected_points[3];
 
         for (int vertex_idx = 0; vertex_idx < 3; ++vertex_idx) {
-            projected_points[vertex_idx] = project(transformed_vertices[vertex_idx]);
+            projected_points[vertex_idx] = project(vec3_from_vec4(transformed_vertices[vertex_idx]));
             // scale and translate the projected points to the middle of the screen.
             projected_points[vertex_idx].x += (window_width  / 2);
             projected_points[vertex_idx].y += (window_height / 2);
@@ -261,6 +285,9 @@ void render(void) {
 
 
     }
+
+    // test to see if we are right handed coordinate system (we are.)
+    // draw_triangle(100,100, 500, 100,  300, 300, 0xFFFF00FF);
 
     // clear the array of triangles to render every frame loop
     array_free(triangles_to_render);

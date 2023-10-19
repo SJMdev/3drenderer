@@ -15,6 +15,8 @@ typedef struct {
     vec3_t* vertices; // dynamic array of vertices
     face_t* faces; // 
     vec3_t rotation;
+    vec3_t scale;
+    vec3_t translation; 
 } mesh_t;
 
 extern mesh_t mesh;
