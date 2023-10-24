@@ -157,14 +157,21 @@ void update() {
         for (int vertex_idx = 0; vertex_idx <3; ++vertex_idx){
             vec4_t transformed_vertex = vec4_from_vec3(face_vertices[vertex_idx]);
 
-            // multiply the scale matrix by the vertex.
-            transformed_vertex =  mat4_mul_vec4(scale_matrix, transformed_vertex);
-            // todo: use a matrix to scale our original vertex.
-            transformed_vertex = mat4_mul_vec4(rotation_matrix_x, transformed_vertex);
-            transformed_vertex = mat4_mul_vec4(rotation_matrix_y, transformed_vertex);
-            transformed_vertex = mat4_mul_vec4(rotation_matrix_z, transformed_vertex); //y
+            mat4_t world_matrix = mat4_identity();
+            world_matrix = mat4_mul_mat4(world_matrix, scale_matrix);
+            world_matrix = mat4_mul_mat4(rotation_matrix_z, world_matrix);
+            world_matrix = mat4_mul_mat4(rotation_matrix_y, world_matrix);
+            world_matrix = mat4_mul_mat4(rotation_matrix_x, world_matrix);
+            world_matrix = mat4_mul_mat4(translation_matrix, world_matrix);
+            transformed_vertex = mat4_mul_vec4(world_matrix, transformed_vertex);
+
+
+            // transformed_vertex = mat4_mul_vec4(scale_matrix, transformed_vertex);
+            // transformed_vertex = mat4_mul_vec4(rotation_matrix_x, transformed_vertex);
+            // transformed_vertex = mat4_mul_vec4(rotation_matrix_y, transformed_vertex);
+            // transformed_vertex = mat4_mul_vec4(rotation_matrix_z, transformed_vertex); //y
             
-            transformed_vertex =  mat4_mul_vec4(translation_matrix, transformed_vertex);
+            // transformed_vertex =  mat4_mul_vec4(translation_matrix, transformed_vertex);
             
 
             transformed_vertices[vertex_idx]  = transformed_vertex;

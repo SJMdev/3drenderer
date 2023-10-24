@@ -64,6 +64,31 @@ mat4_t mat4_make_translate(float tx, float ty, float tz) {
     return mat4;
 }
 
+// note that this does not do perspective divide. we are storing the original z value inside w. (with the 1.0)
+ mat4_t mat4_make_perspective(float fov, float aspect_ratio, float z_near, float z_far) {
+    mat4_t mat4{{{0}}};
+
+    mat4.m[0][0] = aspect_ratio * (1/ tan(fov / 2));
+    mat4.m[1][1] = 1 / tan(fov / 2);
+    mat4.m[2][2] = z_far / (z_far - z_near);
+    mat4.m[2][3] = (-z_far * z_near) / (z_far - z_near);
+    mat4.m[3][2] = 1.0;
+
+    return mat4;
+}
+
+vec4_t mat4_mul_vec4_project(mat4_t projection_matrix, vec4_t v) {
+    vec4_t result = mat4_mul_vec4(projection_matrix, v);
+    // perform perspective divide with original z value.
+    if (result.w != 0.0) {
+        result.x = result.x / result.w;
+        result.y = result.y / result.w;
+        result.z = result.z / result.w;
+    }
+
+    return result;
+}
+
 
 
 vec4_t mat4_mul_vec4(mat4_t m, vec4_t v) {
@@ -76,3 +101,14 @@ vec4_t mat4_mul_vec4(mat4_t m, vec4_t v) {
 
     return result;
 }
+
+mat4_t mat4_mul_mat4(mat4_t lhs, mat4_t rhs) {
+    mat4_t result = mat4_identity();
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j <4; ++j) {
+            result.m[i][j] = lhs.m[i][0] * rhs.m[0][j] +  lhs.m[i][1] * rhs.m[1][j] + lhs.m[i][2] * rhs.m[2][j] + lhs.m[i][3] * rhs.m[3][j];
+        }
+    }
+    return result;
+}
+
