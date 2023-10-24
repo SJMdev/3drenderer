@@ -1,7 +1,7 @@
 # A C renderer that just writes to an SDL texture
 
 
-![Wireframe, triangle fill, you name it.](img/video.mp4)
+[Wireframe, triangle fill, you name it.](img/video.mp4)
 
 
 
