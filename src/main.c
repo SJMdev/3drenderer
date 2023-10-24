@@ -31,9 +31,9 @@ triangle_t* triangles_to_render = NULL;
 
 vec3_t camera_position = {.x = 0, .y= 0, .z = 0};
 
-float fov_factor = 640;
 bool is_running = false;
 int previous_frame_time = 0;
+mat4_t projection_matrix;
 
 void setup() {
     // allocate the required bytes.
@@ -46,6 +46,13 @@ void setup() {
         window_width,
         window_height
     );
+    
+    // note: why does the fov need to be provided in radians?
+    float fov = M_PI / 3.0; // the same as 180/3 (or 60 degrees).
+    float aspect_ratio = (float)window_height / (float)window_width ;
+    float z_near = 0.1;
+    float z_far = 100.0;
+    projection_matrix = mat4_make_perspective(fov, aspect_ratio, z_near, z_far);
 
     // loads the cube values in the mesh data structure
     load_cube_mesh_data();
@@ -98,10 +105,10 @@ void process_input() {
     }
 }
 
-vec2_t project(vec3_t point) {
-    vec2_t projected_point = {.x = (fov_factor *point.x) / point.z, .y = (fov_factor *point.y) / point.z};
-    return projected_point;
-}
+// vec2_t project(vec3_t point) {
+//     vec2_t projected_point = {.x = (fov_factor *point.x) / point.z, .y = (fov_factor *point.y) / point.z};
+//     return projected_point;
+// }
 
 void update() {
 
@@ -119,13 +126,13 @@ void update() {
 
     // change the mesh scale /rotation values per animation frame.
     mesh.rotation.x += 0.01;
-    mesh.rotation.y += 0.01;
-    mesh.rotation.z += 0.02;
+    // mesh.rotation.y += 0.01;
+    // mesh.rotation.z += 0.02;
 
     // mesh.scale.x += 0.0002;
     // mesh.scale.y += 0.0002;
     // translate the vertex away from the camera.
-    mesh.translation.x += 0.001;
+    // mesh.translation.x += 0.001;
     mesh.translation.z = 5.0;
 
     mat4_t translation_matrix = mat4_make_translate(mesh.translation.x, mesh.translation.y, mesh.translation.z);
@@ -202,13 +209,18 @@ void update() {
         }
 
 
-        vec2_t projected_points[3];
+        vec4_t projected_points[3];
 
         for (int vertex_idx = 0; vertex_idx < 3; ++vertex_idx) {
-            projected_points[vertex_idx] = project(vec3_from_vec4(transformed_vertices[vertex_idx]));
-            // scale and translate the projected points to the middle of the screen.
-            projected_points[vertex_idx].x += (window_width  / 2);
-            projected_points[vertex_idx].y += (window_height / 2);
+            vec4_t projected_point = mat4_mul_vec4_project(projection_matrix, transformed_vertices[vertex_idx]);
+
+            projected_points[vertex_idx] = projected_point;
+            // scale into the view.
+            projected_points[vertex_idx].x *= (window_width / 2.0);
+            projected_points[vertex_idx].y *= (window_height / 2.0);
+            // translate the projected points to the middle of the screen.
+            projected_points[vertex_idx].x += (window_width  / 2.0);
+            projected_points[vertex_idx].y += (window_height / 2.0);
 
         }
 

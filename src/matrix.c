@@ -1,4 +1,5 @@
 #include "matrix.h"
+#include <math.h>
 
 mat4_t mat4_identity() {
     mat4_t mat4 = {0};
@@ -66,17 +67,17 @@ mat4_t mat4_make_translate(float tx, float ty, float tz) {
 
 // note that this does not do perspective divide. we are storing the original z value inside w. (with the 1.0)
  mat4_t mat4_make_perspective(float fov, float aspect_ratio, float z_near, float z_far) {
-    mat4_t mat4{{{0}}};
+    mat4_t mat4 = {{{ 0}}};
 
-    mat4.m[0][0] = aspect_ratio * (1/ tan(fov / 2));
-    mat4.m[1][1] = 1 / tan(fov / 2);
+    mat4.m[0][0] = aspect_ratio * (1 / tan(fov / 2.0));
+    mat4.m[1][1] = 1 / tan(fov / 2.0);
     mat4.m[2][2] = z_far / (z_far - z_near);
     mat4.m[2][3] = (-z_far * z_near) / (z_far - z_near);
     mat4.m[3][2] = 1.0;
 
     return mat4;
 }
-
+    
 vec4_t mat4_mul_vec4_project(mat4_t projection_matrix, vec4_t v) {
     vec4_t result = mat4_mul_vec4(projection_matrix, v);
     // perform perspective divide with original z value.

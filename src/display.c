@@ -8,8 +8,8 @@ uint32_t* color_buffer = NULL;
 SDL_Texture* color_buffer_texture = NULL;
 int window_width = 0;
 int window_height = 0;
-int DEFAULT_WINDOW_WIDTH = 1920;
-int DEFAULT_WINDOW_HEIGHT = 1080;
+int DEFAULT_WINDOW_WIDTH = 800;
+int DEFAULT_WINDOW_HEIGHT = 600;
 bool is_fullscreen = false;
 
 bool initialize_window(void) {
