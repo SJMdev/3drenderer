@@ -12,7 +12,7 @@
 #include "vector.h"
 #include "mesh.h"
 #include "matrix.h"
-
+#include "light.h"
 //@NOTE(SJM): we can do the enum trick? << 0, << 1, etc.
 
 enum RENDER_MODE render_mode = RENDER_MODE_FILLED_WITH_WIREFRAME;
@@ -35,6 +35,8 @@ bool is_running = false;
 int previous_frame_time = 0;
 mat4_t projection_matrix;
 
+light_t light = {.direction = {0.0, 0.0, 1.0}};
+
 void setup() {
     // allocate the required bytes.
     color_buffer = (uint32_t*)malloc(sizeof(uint32_t) * window_width * window_height);
@@ -55,8 +57,10 @@ void setup() {
     projection_matrix = mat4_make_perspective(fov, aspect_ratio, z_near, z_far);
 
     // loads the cube values in the mesh data structure
-    load_cube_mesh_data();
-    //load_obj_file_data("assets/cube.obj");
+    // load_cube_mesh_data();
+    // load_obj_file_data("assets/cube.obj");
+    load_obj_file_data("assets/f22.obj");
+
 
 }
 
@@ -125,9 +129,9 @@ void update() {
     triangles_to_render = NULL; // uh, are we not leaking?
 
     // change the mesh scale /rotation values per animation frame.
-    mesh.rotation.x += 0.01;
-    // mesh.rotation.y += 0.01;
-    // mesh.rotation.z += 0.02;
+    mesh.rotation.x += 0.001;
+    mesh.rotation.y += 0.001;
+    mesh.rotation.z += 0.002;
 
     // mesh.scale.x += 0.0002;
     // mesh.scale.y += 0.0002;
@@ -227,13 +231,17 @@ void update() {
         // calculate the average depth for each face based on the vertices after transformation.
         float average_depth = (transformed_vertices[0].z + transformed_vertices[1].z + transformed_vertices[2].z) / 3.0;
 
+        // calculate the triangle color based on the light angle
+        float light_intensity_vector = -vec3_dot(light.direction, normal);
+        
+
         triangle_t projected_triangle= {
             .points = {
                 {projected_points[0].x, projected_points[0].y},
                 {projected_points[1].x,  projected_points[1].y},
                 {projected_points[2].x,  projected_points[2].y},
             },
-            .color = mesh_face.color,
+            .color = light_apply_intensity(mesh_face.color, light_intensity_vector),
             .average_depth = average_depth
         };
 
