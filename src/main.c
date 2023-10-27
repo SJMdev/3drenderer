@@ -58,8 +58,8 @@ void setup() {
 
     // loads the cube values in the mesh data structure
     // load_cube_mesh_data();
-    // load_obj_file_data("assets/cube.obj");
-    load_obj_file_data("assets/f22.obj");
+    load_obj_file_data("assets/cube.obj");
+    // load_obj_file_data("assets/f22.obj");
 
 
 }
@@ -222,6 +222,10 @@ void update() {
             // scale into the view.
             projected_points[vertex_idx].x *= (window_width / 2.0);
             projected_points[vertex_idx].y *= (window_height / 2.0);
+
+            // invert y, since screen space y is top -> bottom,
+            projected_points[vertex_idx].y *= -1;
+
             // translate the projected points to the middle of the screen.
             projected_points[vertex_idx].x += (window_width  / 2.0);
             projected_points[vertex_idx].y += (window_height / 2.0);
