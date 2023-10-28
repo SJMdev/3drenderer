@@ -58,8 +58,8 @@ void setup() {
 
     // loads the cube values in the mesh data structure
     // load_cube_mesh_data();
-    load_obj_file_data("assets/cube.obj");
-    // load_obj_file_data("assets/f22.obj");
+    // load_obj_file_data("assets/cube.obj");
+    load_obj_file_data("assets/f22.obj");
 
 
 }
@@ -93,6 +93,12 @@ void process_input() {
             }
             if (event.key.keysym.sym == SDLK_4) {
                 render_mode = RENDER_MODE_FILLED;
+            }
+            if (event.key.keysym.sym == SDLK_5) {
+                render_mode = RENDER_MODE_TEXTURED;
+            }
+            if (event.key.keysym.sym == SDLK_6) {
+                render_mode = RENDER_MODE_TEXTURED_WITH_WIREFRAME;
             }
             if (event.key.keysym.sym == SDLK_c) {
                 cull_mode = CULL_BACKFACE;
@@ -296,8 +302,13 @@ void render(void) {
                 triangle.points[2].y,
                 triangle.color);
         }
+        // textured
+        if (render_mode == RENDER_MODE_TEXTURED || render_mode == RENDER_MODE_TEXTURED_WITH_WIREFRAME) {
+            draw_textured_triangle();
+        }
+
         // wireframe
-        if (render_mode == RENDER_MODE_FILLED_WITH_WIREFRAME ||  render_mode == RENDER_MODE_WIREFRAME || render_mode == RENDER_MODE_WIREFRAME_WITH_VERTICES) {
+        if (render_mode == RENDER_MODE_FILLED_WITH_WIREFRAME ||  render_mode == RENDER_MODE_WIREFRAME || render_mode == RENDER_MODE_WIREFRAME_WITH_VERTICES || render_mode == RENDER_MODE_TEXTURED_WITH_WIREFRAME) {
             draw_triangle(
                         triangle.points[0].x,
                         triangle.points[0].y,
