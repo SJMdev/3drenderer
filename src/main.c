@@ -13,6 +13,8 @@
 #include "mesh.h"
 #include "matrix.h"
 #include "light.h"
+#include "triangle.h"
+#include "texture.h"
 //@NOTE(SJM): we can do the enum trick? << 0, << 1, etc.
 
 enum RENDER_MODE render_mode = RENDER_MODE_FILLED_WITH_WIREFRAME;
@@ -56,10 +58,11 @@ void setup() {
     float z_far = 100.0;
     projection_matrix = mat4_make_perspective(fov, aspect_ratio, z_near, z_far);
 
+    mesh_texture = (uint32_t*)REDBRICK_TEXTURE;
     // loads the cube values in the mesh data structure
-    // load_cube_mesh_data();
+    load_cube_mesh_data();
     // load_obj_file_data("assets/cube.obj");
-    load_obj_file_data("assets/f22.obj");
+    // load_obj_file_data("assets/f22.obj");
 
 
 }
@@ -251,6 +254,11 @@ void update() {
                 {projected_points[1].x,  projected_points[1].y},
                 {projected_points[2].x,  projected_points[2].y},
             },
+            .texcoords = {
+                {mesh_face.a_uv.u, mesh_face.a_uv.v},
+                {mesh_face.b_uv.u, mesh_face.b_uv.v},
+                {mesh_face.c_uv.u, mesh_face.c_uv.v}
+            },
             .color = light_apply_intensity(mesh_face.color, light_intensity_vector),
             .average_depth = average_depth
         };
@@ -304,7 +312,23 @@ void render(void) {
         }
         // textured
         if (render_mode == RENDER_MODE_TEXTURED || render_mode == RENDER_MODE_TEXTURED_WITH_WIREFRAME) {
-            draw_textured_triangle();
+            draw_textured_triangle(
+                triangle.points[0].x,
+                triangle.points[0].y,
+                triangle.texcoords[0].u,
+                triangle.texcoords[0].v,
+
+                triangle.points[1].x,
+                triangle.points[1].y,
+                triangle.texcoords[1].u,
+                triangle.texcoords[1].v,
+
+                triangle.points[2].x,
+                triangle.points[2].y,
+                triangle.texcoords[2].u,
+                triangle.texcoords[2].v,
+                mesh_texture
+            );
         }
 
         // wireframe
