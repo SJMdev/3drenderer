@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdint.h>
+#include "upng.h"
 
 // We need to tell SDL that we are doing the main instead of SDL.
 #define SDL_MAIN_HANDLED 
@@ -15,6 +16,7 @@
 #include "light.h"
 #include "triangle.h"
 #include "texture.h"
+#
 //@NOTE(SJM): we can do the enum trick? << 0, << 1, etc.
 
 enum RENDER_MODE render_mode = RENDER_MODE_FILLED_WITH_WIREFRAME;
@@ -45,24 +47,24 @@ void setup() {
 
     color_buffer_texture = SDL_CreateTexture(
         renderer, 
-        SDL_PIXELFORMAT_ARGB8888,
+        SDL_PIXELFORMAT_RGBA32,
         SDL_TEXTUREACCESS_STREAMING,
         window_width,
         window_height
     );
     
-    // note: why does the fov need to be provided in radians?
     float fov = M_PI / 3.0; // the same as 180/3 (or 60 degrees).
     float aspect_ratio = (float)window_height / (float)window_width ;
     float z_near = 0.1;
     float z_far = 100.0;
     projection_matrix = mat4_make_perspective(fov, aspect_ratio, z_near, z_far);
 
-    mesh_texture = (uint32_t*)REDBRICK_TEXTURE;
+    // mesh_texture = (uint32_t*)REDBRICK_TEXTURE;
     // loads the cube values in the mesh data structure
     load_cube_mesh_data();
     // load_obj_file_data("assets/cube.obj");
     // load_obj_file_data("assets/f22.obj");
+    load_png_texture_data("./assets/cube_2.png");
 
 
 }
@@ -139,8 +141,8 @@ void update() {
 
     // change the mesh scale /rotation values per animation frame.
     mesh.rotation.x += 0.001;
-    // mesh.rotation.y += 0.001;
-    // mesh.rotation.z += 0.002;
+    mesh.rotation.y += 0.001;
+    mesh.rotation.z += 0.002;
 
     // mesh.scale.x += 0.0002;
     // mesh.scale.y += 0.0002;
@@ -184,16 +186,6 @@ void update() {
             world_matrix = mat4_mul_mat4(rotation_matrix_x, world_matrix);
             world_matrix = mat4_mul_mat4(translation_matrix, world_matrix);
             transformed_vertex = mat4_mul_vec4(world_matrix, transformed_vertex);
-
-
-            // transformed_vertex = mat4_mul_vec4(scale_matrix, transformed_vertex);
-            // transformed_vertex = mat4_mul_vec4(rotation_matrix_x, transformed_vertex);
-            // transformed_vertex = mat4_mul_vec4(rotation_matrix_y, transformed_vertex);
-            // transformed_vertex = mat4_mul_vec4(rotation_matrix_z, transformed_vertex); //y
-            
-            // transformed_vertex =  mat4_mul_vec4(translation_matrix, transformed_vertex);
-            
-
             transformed_vertices[vertex_idx]  = transformed_vertex;
         }
 
@@ -250,9 +242,9 @@ void update() {
 
         triangle_t projected_triangle= {
             .points = {
-                {projected_points[0].x, projected_points[0].y},
-                {projected_points[1].x,  projected_points[1].y},
-                {projected_points[2].x,  projected_points[2].y},
+                {projected_points[0].x, projected_points[0].y,projected_points[0].z, projected_points[0].w},
+                {projected_points[1].x,  projected_points[1].y,projected_points[1].z, projected_points[1].w},
+                {projected_points[2].x,  projected_points[2].y,projected_points[2].z, projected_points[2].w},
             },
             .texcoords = {
                 {mesh_face.a_uv.u, mesh_face.a_uv.v},
@@ -315,16 +307,22 @@ void render(void) {
             draw_textured_triangle(
                 triangle.points[0].x,
                 triangle.points[0].y,
+                triangle.points[0].z,
+                triangle.points[0].w,
                 triangle.texcoords[0].u,
                 triangle.texcoords[0].v,
 
                 triangle.points[1].x,
                 triangle.points[1].y,
+                triangle.points[1].z,
+                triangle.points[1].w,
                 triangle.texcoords[1].u,
                 triangle.texcoords[1].v,
 
                 triangle.points[2].x,
                 triangle.points[2].y,
+                triangle.points[2].z,
+                triangle.points[2].w,
                 triangle.texcoords[2].u,
                 triangle.texcoords[2].v,
                 mesh_texture

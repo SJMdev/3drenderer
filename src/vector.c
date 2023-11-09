@@ -52,6 +52,16 @@ void vec2_normalize(vec2_t* v) {
     v->y = v->y / length;
 }
 
+vec2_t vec2_from_vec4(vec4_t v) {
+    vec2_t result = {
+        .x = v.x,
+        .y = v.y
+    };
+
+    return result;
+}
+
+
 //-----------------------------------------
 // implementations of 3D Vector functions
 float vec3_length(vec3_t v) {
