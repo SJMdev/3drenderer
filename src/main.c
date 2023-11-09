@@ -139,8 +139,8 @@ void update() {
 
     // change the mesh scale /rotation values per animation frame.
     mesh.rotation.x += 0.001;
-    mesh.rotation.y += 0.001;
-    mesh.rotation.z += 0.002;
+    // mesh.rotation.y += 0.001;
+    // mesh.rotation.z += 0.002;
 
     // mesh.scale.x += 0.0002;
     // mesh.scale.y += 0.0002;

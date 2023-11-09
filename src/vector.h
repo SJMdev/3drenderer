@@ -18,6 +18,8 @@ typedef struct {
     float w;
 } vec4_t;
 
+vec3_t barycentric_weights(vec2_t a, vec2_t b, vec2_t c, vec2_t p);
+
 float vec2_length(vec2_t v);
 vec2_t vec2_add(vec2_t lhs, vec2_t rhs);
 vec2_t vec2_div(vec2_t lhs, float scalar);
@@ -42,5 +44,6 @@ vec3_t vec3_rotate_x(vec3_t v, float angle);
 vec3_t vec3_from_vec4(vec4_t v);
 // vector conversiuon functions.
 vec4_t vec4_from_vec3(vec3_t v);
+
 
 #endif
