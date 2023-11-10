@@ -44,6 +44,7 @@ light_t light = {.direction = {0.0, 0.0, 1.0}};
 void setup() {
     // allocate the required bytes.
     color_buffer = (uint32_t*)malloc(sizeof(uint32_t) * window_width * window_height);
+    z_buffer = (float*)malloc(sizeof(float) * window_width * window_height);
 
     color_buffer_texture = SDL_CreateTexture(
         renderer, 
@@ -65,10 +66,10 @@ void setup() {
     // load_obj_file_data("assets/cube.obj");
     // load_png_texture_data("./assets/cube_2.png");
 
-    // load_obj_file_data("assets/f22.obj");
-    // load_png_texture_data("./assets/f22.png");
-    load_obj_file_data("assets/crab.obj");
-    load_png_texture_data("assets/crab.png");
+    load_obj_file_data("assets/f22.obj");
+    load_png_texture_data("./assets/f22.png");
+    // load_obj_file_data("assets/crab.obj");
+    // load_png_texture_data("assets/crab.png");
 
 }
 
@@ -236,8 +237,9 @@ void update() {
 
         }
 
+        //@NOTE(SJM): this is no longer necessary after introduction of z buffer
         // calculate the average depth for each face based on the vertices after transformation.
-        float average_depth = (transformed_vertices[0].z + transformed_vertices[1].z + transformed_vertices[2].z) / 3.0;
+        // float average_depth = (transformed_vertices[0].z + transformed_vertices[1].z + transformed_vertices[2].z) / 3.0;
 
         // calculate the triangle color based on the light angle
         float light_intensity_vector = -vec3_dot(light.direction, normal);
@@ -254,8 +256,7 @@ void update() {
                 {mesh_face.b_uv.u, mesh_face.b_uv.v},
                 {mesh_face.c_uv.u, mesh_face.c_uv.v}
             },
-            .color = light_apply_intensity(mesh_face.color, light_intensity_vector),
-            .average_depth = average_depth
+            .color = light_apply_intensity(mesh_face.color, light_intensity_vector)
         };
 
         // save the projected triangle in the array of triangles to render.
@@ -263,20 +264,21 @@ void update() {
         array_push(triangles_to_render, projected_triangle);
     }
 
+    //@NOTE(SJM): this is no longer necessary after introduction of z-buffer.
     // Painter's algorithm:
     // sort the triangles to render by their average_depth
-    int triangle_count = array_length(triangles_to_render);
+    // int triangle_count = array_length(triangles_to_render);
 
-    for(int idx = 0; idx != triangle_count; ++idx) {
-        for (int jdx = idx; jdx != triangle_count; ++jdx) {
-            // idx is "nearer" than jdx: swap them.
-            if (triangles_to_render[idx].average_depth < triangles_to_render[jdx].average_depth) {
-                triangle_t temp = triangles_to_render[idx];
-                triangles_to_render[idx] = triangles_to_render[jdx];
-                triangles_to_render[jdx] = temp;
-            }
-        }
-    }
+    // for(int idx = 0; idx != triangle_count; ++idx) {
+    //     for (int jdx = idx; jdx != triangle_count; ++jdx) {
+    //         // idx is "nearer" than jdx: swap them.
+    //         if (triangles_to_render[idx].average_depth < triangles_to_render[jdx].average_depth) {
+    //             triangle_t temp = triangles_to_render[idx];
+    //             triangles_to_render[idx] = triangles_to_render[jdx];
+    //             triangles_to_render[jdx] = temp;
+    //         }
+    //     }
+    // }
 
 }
 
@@ -299,10 +301,18 @@ void render(void) {
             draw_filled_triangle(
                 triangle.points[0].x,
                 triangle.points[0].y,
+                triangle.points[0].z,
+                triangle.points[0].w,
+                
                 triangle.points[1].x,
                 triangle.points[1].y,
+                triangle.points[1].z,
+                triangle.points[1].w,
+
                 triangle.points[2].x,
                 triangle.points[2].y,
+                triangle.points[2].z,
+                triangle.points[2].w,
                 triangle.color);
         }
         // textured
@@ -361,6 +371,7 @@ void render(void) {
 
     render_color_buffer();
     clear_color_buffer(0xff000000);
+    clear_z_buffer();
 
     SDL_RenderPresent(renderer);
 }
@@ -374,6 +385,7 @@ void transform_points() {
 // free the memory that was dynamically allocated by the program.
 void free_resources(void) {
     free(color_buffer);
+    free(z_buffer);
 
     upng_free(png_texture);
 
