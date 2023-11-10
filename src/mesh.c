@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "mesh.h"
 #include "array.h"
+#include "texture.h"
 
 mesh_t mesh = {
     .vertices = NULL,
@@ -67,6 +68,7 @@ void load_obj_file_data(char* filename) {
 
     // Buffer to store each line
     char line[1024]; // You can adjust the size as needed
+    tex2_t* texture_coordinates = NULL;
 
     // Read the file line by line
     while (fgets(line, sizeof(line), file) != NULL) {
@@ -77,6 +79,7 @@ void load_obj_file_data(char* filename) {
         int vertex_indices[3];
         int texture_indices[3];
         int normal_indices[3];
+        tex2_t vertex_uv;
 
         // Use sscanf to parse the line
         if (sscanf(line, "v %f %f %f", &position.x, &position.y, &position.z) == 3) {
@@ -84,7 +87,9 @@ void load_obj_file_data(char* filename) {
             printf("x: %f, y: %f, z: %f\n", position.x, position.y, position.z);
             array_push(mesh.vertices, position);
 
-        } else if (sscanf(line, "f %d/%d/%d %d/%d/%d %d/%d/%d", 
+        } else if (sscanf(line, "vt %f %f", &vertex_uv.u,  &vertex_uv.v) == 2) {
+            array_push(texture_coordinates, vertex_uv);
+        }else if (sscanf(line, "f %d/%d/%d %d/%d/%d %d/%d/%d", 
             &vertex_indices[0],
             &texture_indices[0],
             &normal_indices[0],
@@ -101,9 +106,13 @@ void load_obj_file_data(char* filename) {
 
 
             //@NOTE(SJM): we need to subtract all indices by 1 since we start at 1. 
-            face.a = vertex_indices[0];
-            face.b = vertex_indices[1];
-            face.c = vertex_indices[2];
+            face.a = vertex_indices[0] - 1;
+            face.b = vertex_indices[1] - 1;
+            face.c = vertex_indices[2] - 1;
+            face.a_uv = texture_coordinates[texture_indices[0] -1];
+            face.b_uv = texture_coordinates[texture_indices[1] -1];
+            face.c_uv = texture_coordinates[texture_indices[2] -1];
+
             face.color = 0xFFFFFFFF;
 
 
@@ -114,6 +123,7 @@ void load_obj_file_data(char* filename) {
             // printf("Failed to parse the line: %s\n", line);
         }
     }
+    array_free(texture_coordinates);
 
     // Close the file
     fclose(file);

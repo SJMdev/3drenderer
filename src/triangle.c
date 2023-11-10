@@ -127,17 +127,18 @@ void draw_texel(
     interpolated_u /= interpolated_reciprocal_w;
     interpolated_v /= interpolated_reciprocal_w;
 
-    int tex_x = abs((int)(interpolated_u * texture_width));
-    int tex_y = abs((int)(interpolated_v * texture_width));
+    // modulo so we do not have invalid values (not really clamping, but rolling over.)
+    int tex_x = abs((int)(interpolated_u * texture_width)) % texture_width;
+    int tex_y = abs((int)(interpolated_v * texture_width)) % texture_height;
     // TODO(SJM): clamping?
-    if(tex_y >= texture_height) 
-    {
-        tex_y = texture_height - 1;
-    }
-    // assert(tex_x < texture_width);
-    if (tex_x >= texture_width) {
-        tex_x = texture_width - 1;
-    }
+    // if(tex_y >= texture_height) 
+    // {
+    //     tex_y = texture_height - 1;
+    // }
+    // // assert(tex_x < texture_width);
+    // if (tex_x >= texture_width) {
+    //     tex_x = texture_width - 1;
+    // }
 
 
     draw_pixel(x,y, texture[(texture_width * tex_y) + tex_x]);
@@ -186,6 +187,12 @@ void draw_textured_triangle(int x0, int y0, float z0, float w0, float u0, float 
         float_swap(&u0, &u1);
         float_swap(&v0, &v1);
     }
+
+    // flip the V component to account for inverted UV-coordinates (V grows downwards)
+    v0  = 1-v0;
+    v1  = 1-v1;
+    v2  = 1-v2;
+
 
     // create vectors after we sort vertices.
     vec4_t point_a = {x0, y0, z0, w0};
