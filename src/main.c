@@ -17,6 +17,7 @@
 #include "triangle.h"
 #include "texture.h"
 #include "camera.h"
+#include "clipping.h"
 
 enum RENDER_MODE render_mode = RENDER_MODE_FILLED_WITH_WIREFRAME;
 enum CULL_MODE cull_mode = CULL_BACKFACE;
@@ -61,6 +62,8 @@ void setup() {
     float z_near = 0.1;
     float z_far = 100.0;
     projection_matrix = mat4_make_perspective(fov, aspect_ratio, z_near, z_far);
+    init_frustrum_planes(fov, z_near, z_far);
+
 
     // mesh_texture = (uint32_t*)REDBRICK_TEXTURE;
     // loads the cube values in the mesh data structure
