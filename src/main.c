@@ -16,8 +16,7 @@
 #include "light.h"
 #include "triangle.h"
 #include "texture.h"
-#
-//@NOTE(SJM): we can do the enum trick? << 0, << 1, etc.
+#include "camera.h"
 
 enum RENDER_MODE render_mode = RENDER_MODE_FILLED_WITH_WIREFRAME;
 enum CULL_MODE cull_mode = CULL_BACKFACE;
@@ -30,14 +29,17 @@ enum CULL_MODE cull_mode = CULL_BACKFACE;
 // Pressing “d” we should disable the back-face culling
 
 
+#define MAX_TRIANGLES_PER_MESH 10000
+triangle_t triangles_to_render[MAX_TRIANGLES_PER_MESH];
+int triangles_to_render_count = 0;
 
-triangle_t* triangles_to_render = NULL;
-
-vec3_t camera_position = {.x = 0, .y= 0, .z = 0};
 
 bool is_running = false;
 int previous_frame_time = 0;
+float delta_time = 0;
+
 mat4_t projection_matrix;
+mat4_t view_matrix;
 
 light_t light = {.direction = {0.0, 0.0, 1.0}};
 
@@ -68,6 +70,9 @@ void setup() {
 
     load_obj_file_data("assets/f22.obj");
     load_png_texture_data("./assets/f22.png");
+
+    // load_obj_file_data("assets/drone.obj");
+    // load_png_texture_data("./assets/drone.png");
     // load_obj_file_data("assets/crab.obj");
     // load_png_texture_data("assets/crab.png");
 
@@ -137,22 +142,41 @@ void update() {
         SDL_Delay(time_to_wait);
     }
 
+    // Get a delta time factor converted to seconds to be used to update our game objects.
+    // /1000 because we get ms back from SDL.
+    delta_time = (SDL_GetTicks() - previous_frame_time) / 1000.0;
+
+
+
     // how many miliseconds have passed since the last frame?
     previous_frame_time = SDL_GetTicks();
 
+    // initialize the counter of triangles to render for the current frame.
+    triangles_to_render_count = 0;
+    //@NOTE(SJM): we are moving to a static array of triangles to render.
     // initialize the array of triangles to render
-    triangles_to_render = NULL; // uh, are we not leaking?
+
 
     // change the mesh scale /rotation values per animation frame.
-    mesh.rotation.x += 0.001;
-    mesh.rotation.y += 0.001;
-    mesh.rotation.z += 0.002;
+    // 0.6 radians per second.
+    mesh.rotation.x += 0.6 * delta_time;
+    mesh.rotation.y += 0.6 * delta_time;
+    mesh.rotation.z += 0.6 * delta_time;
 
     // mesh.scale.x += 0.0002;
     // mesh.scale.y += 0.0002;
     // translate the vertex away from the camera.
     // mesh.translation.x += 0.001;
-    mesh.translation.z = 5.0;
+    mesh.translation.z = 4.0;
+
+    // change the camera position per animation frame.
+    camera.position.x += 0.5 * delta_time;
+    camera.position.y += 0.8 * delta_time;;
+    vec3_t target = {0.0, 0.0, 4.0};
+    vec3_t up_direction = {0.0, 1.0, 0.0};
+    view_matrix = mat4_look_at(camera.position, target, up_direction);
+
+
 
     mat4_t translation_matrix = mat4_make_translate(mesh.translation.x, mesh.translation.y, mesh.translation.z);
     mat4_t scale_matrix = mat4_make_scale(mesh.scale.x, mesh.scale.y, mesh.scale.z);
@@ -190,6 +214,10 @@ void update() {
             world_matrix = mat4_mul_mat4(rotation_matrix_x, world_matrix);
             world_matrix = mat4_mul_mat4(translation_matrix, world_matrix);
             transformed_vertex = mat4_mul_vec4(world_matrix, transformed_vertex);
+
+            // transform to (view / camera) space  by multiplying with view matrix.
+            transformed_vertex = mat4_mul_vec4(view_matrix, transformed_vertex);
+            
             transformed_vertices[vertex_idx]  = transformed_vertex;
         }
 
@@ -204,12 +232,13 @@ void update() {
         vec3_normalize(&c_minus_a);
 
         // calculate the normal of the face
+        vec3_t origin = {0.0,0.0,0.0};
         vec3_t normal = vec3_cross(b_minus_a, c_minus_a);
         // normalize the normal
         vec3_normalize(&normal);
         
         // calculate ray vector
-        vec3_t camera_ray_vector = vec3_sub(camera_position, a);
+        vec3_t camera_ray_vector = vec3_sub(origin, a);
         // calculate how aligned the camera ray is with the face normal
         float dot_normal_camera = vec3_dot(normal, camera_ray_vector);
 
@@ -260,8 +289,13 @@ void update() {
         };
 
         // save the projected triangle in the array of triangles to render.
-        // triangles_to_render[face_idx] = projected_triangle;
-        array_push(triangles_to_render, projected_triangle);
+        if (triangles_to_render_count < MAX_TRIANGLES_PER_MESH) {
+            triangles_to_render[triangles_to_render_count] = projected_triangle;
+            triangles_to_render_count += 1;
+        } else{
+            assert(false && "TOO MANY TRIANGLES!");
+        }
+        
     }
 
     //@NOTE(SJM): this is no longer necessary after introduction of z-buffer.
@@ -288,12 +322,11 @@ void render(void) {
 
     draw_grid();
 
-    int triangle_count = array_length(triangles_to_render);
     // loop over all projected triangles and render them.
 
     //@SPEED: this evaluates render_mode linear amount of times for the number of triangles.
     // not really necessary, but otherwise there is some ugly code duplication.
-    for (int triangle_idx = 0; triangle_idx < triangle_count; ++triangle_idx) {
+    for (int triangle_idx = 0; triangle_idx < triangles_to_render_count; ++triangle_idx) {
         triangle_t triangle = triangles_to_render[triangle_idx];
 
         // filled
@@ -303,7 +336,7 @@ void render(void) {
                 triangle.points[0].y,
                 triangle.points[0].z,
                 triangle.points[0].w,
-                
+
                 triangle.points[1].x,
                 triangle.points[1].y,
                 triangle.points[1].z,
@@ -366,8 +399,6 @@ void render(void) {
     // test to see if we are right handed coordinate system (we are.)
     // draw_triangle(100,100, 500, 100,  300, 300, 0xFFFF00FF);
 
-    // clear the array of triangles to render every frame loop
-    array_free(triangles_to_render);
 
     render_color_buffer();
     clear_color_buffer(0xff000000);

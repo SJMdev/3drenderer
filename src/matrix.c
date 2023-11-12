@@ -77,6 +77,41 @@ mat4_t mat4_make_translate(float tx, float ty, float tz) {
 
     return mat4;
 }
+
+mat4_t mat4_look_at(vec3_t eye, vec3_t target, vec3_t up) {
+    // since we move the camera to the origin, all other vertices in the scene
+    // have to be translated by (-x, -y, -z).
+    // furthermore, we need to undo the camera "orientation" by multiplying by the inverse
+    // rotation.
+    // the rotation matrix is normally defined by the coordinate system three column vectors of x,y,z.
+    // however, we need to invert the rotation matrix because we need to undo.
+    
+    //@NOTE(SJM): this is actually just speculation, but whatever
+    // this inversion does not apply to the translation matrix because it is easy to invert it by just 
+    // multiplying by minus one.
+
+    vec3_t z = vec3_sub(target, eye);
+    vec3_normalize(&z); // forward
+    vec3_t x = vec3_cross(up, z);
+    vec3_normalize(&x); // right 
+    vec3_t y = vec3_cross(z,x); // up!
+
+    // x.x, x.y, x.z,  -dot(x, eye),
+    // y.x, y.y, y.z   -dot(y, eye),
+    // z.x, z.y, z.z   -dot(z, eye),
+    //  0   0     0          1
+
+
+    mat4_t view_matrix = {{
+        {x.x, x.y, x.z, -vec3_dot(x, eye) },
+        {y.x, y.y, y.z, -vec3_dot(y, eye)},
+        {z.x, z.y, z.z, -vec3_dot(z, eye)},
+        {0,   0,   0,    1}
+    }};
+
+    return view_matrix;
+}
+
     
 vec4_t mat4_mul_vec4_project(mat4_t projection_matrix, vec4_t v) {
     vec4_t result = mat4_mul_vec4(projection_matrix, v);
