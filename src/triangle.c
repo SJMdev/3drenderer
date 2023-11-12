@@ -22,28 +22,36 @@ void draw_triangle_pixel(
     vec4_t point_a,
     vec4_t point_b,
     vec4_t point_c
-) 
+)
 {
-     // we do not need z or w for barycentric weights.
+    // we do not need z or w for barycentric weights.
     vec2_t a = vec2_from_vec4(point_a);
     vec2_t b = vec2_from_vec4(point_b);
     vec2_t c = vec2_from_vec4(point_c);
 
-    vec2_t point_p = {x,y};
+    vec2_t point_p = { x,y };
     vec3_t weights = barycentric_weights(a, b, c, point_p);
     float alpha = weights.x;
-    float beta =  weights.y;
+    float beta = weights.y;
     float gamma = weights.z;
 
     // variazble sto store the interpolated values of U,v, and also 1/W for the current pixel.
     float interpolated_reciprocal_w = 0;
 
     // interpolate 1/w for the current pixel.
-    interpolated_reciprocal_w = alpha * (1 / point_a.w) + beta * ( 1/ point_b.w) + gamma * (1 / point_c.w);
+    interpolated_reciprocal_w = alpha * (1 / point_a.w) + beta * (1 / point_b.w) + gamma * (1 / point_c.w);
 
-    
+
     // adjust 1/w such that the pixels that are closer to the camera have smaller values.
     interpolated_reciprocal_w = 1.0 - interpolated_reciprocal_w;
+
+    // assert(x < window_width);
+    // assert(y < window_height);
+
+    if (x >= window_width || x < 0 || y >= window_height || y < 0) {
+        printf("wanted to draw out of bounds, forcing early return.\n");
+        return;
+    }
 
     // only the pixel if the depth value is less than the one previously stored in z-buffer. (less meaning closer to the camera,.
     // since z is into the screen.)

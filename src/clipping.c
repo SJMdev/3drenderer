@@ -1,6 +1,6 @@
 #include "clipping.h"
 #include <math.h>
-
+#include <assert.h>
 
 #define PLANE_COUNT 6
 plane_t frustum_planes[PLANE_COUNT];
@@ -42,19 +42,103 @@ void init_frustrum_planes(float fov, float z_near, float z_far) {
     frustum_planes[FAR_FRUSTUM_PLANE].normal.z = -1;
 }
 
-bool point_inside_plane(vec3_t point, plane_t plane) {
 
-    vec3_t vector = vec3_sub(point, plane.point);
-    vec3_normalize(&vector);
 
-    float dot = vec3_dot(plane.normal, vector);
+polygon_t create_polygon_from_triangle(
+    vec3_t v0,
+    vec3_t v1,
+    vec3_t v2)
+{
+    polygon_t polygon = {
+        .vertices = {v0, v1, v2},
+        .vertex_count = 3
+    };
 
-    if (dot > 0.0) return true;
-
-    return false; 
+    return polygon;
 }
 
-// vec3_t find_intersection(vec3_t point_inside, vec3_t point_outside, plane_t plane) {
 
 
-// }
+void clip_polygon_against_plane(polygon_t* polygon, int plane)
+{
+    vec3_t plane_point = frustum_planes[plane].point;
+    vec3_t plane_normal = frustum_planes[plane].normal; 
+
+    vec3_t inside_vertices[MAX_POLYGON_VERTEX_COUNT];    
+    int inside_vertex_count = 0;
+
+    vec3_t* current_vertex = &polygon->vertices[0];
+    vec3_t* previous_vertex = &polygon->vertices[polygon->vertex_count - 1];
+
+    float current_dot = 0;
+    float previous_dot = vec3_dot(vec3_sub(*previous_vertex, plane_point), plane_normal);
+
+    // loop while the current vertex is different from the last vertex
+    while (current_vertex != &polygon->vertices[polygon->vertex_count]) {
+        current_dot = vec3_dot(vec3_sub(*current_vertex, plane_point), plane_normal);
+
+
+        // if we changed from isde to outside or vice-versa
+        if (current_dot * previous_dot < 0.0) {
+            // find the interpolation factor t
+            // calculate the intersection point I = Q1 + t(Q2 - Q1)
+            
+            float t = previous_dot / (previous_dot - current_dot);
+
+            vec3_t intersection_point = vec3_clone(current_vertex); // I = Qc
+            intersection_point = vec3_sub(intersection_point, *previous_vertex); //I = (Qc - Qp)
+            intersection_point = vec3_mul(intersection_point, t); // I = t(Qc - Qp)
+            intersection_point = vec3_add(intersection_point, *previous_vertex); // I = Qp + t(Qc - Qp)
+
+            inside_vertices[inside_vertex_count] = vec3_clone(&intersection_point);
+            inside_vertex_count += 1;
+        }
+
+        // if current point is inside the plane
+        if (current_dot > 0.0) {
+            // insert current vertex in the list of inside vertices
+            inside_vertices[inside_vertex_count] = vec3_clone(current_vertex);
+            inside_vertex_count += 1;
+        }
+
+        previous_dot = current_dot;
+        previous_vertex = current_vertex;
+        current_vertex++; // ouch.
+    }
+
+    // @NOTE(SJM): can it be the case that we end up with less vertices than we started with?
+    // at the end, copy the list of inside vertices into  the destination polygon (out parameter)
+    for (int idx = 0; idx != inside_vertex_count; ++idx) {
+        polygon->vertices[idx] = vec3_clone(&inside_vertices[idx]);
+    }
+
+    polygon->vertex_count = inside_vertex_count;
+}
+
+void clip_polygon(polygon_t* polygon) {
+
+    clip_polygon_against_plane(polygon, LEFT_FRUSTUM_PLANE);
+    clip_polygon_against_plane(polygon, RIGHT_FRUSTUM_PLANE);
+    clip_polygon_against_plane(polygon, TOP_FRUSTUM_PLANE);
+    clip_polygon_against_plane(polygon, BOTTOM_FRUSTUM_PLANE);
+    clip_polygon_against_plane(polygon, NEAR_FRUSTUM_PLANE);
+    clip_polygon_against_plane(polygon, FAR_FRUSTUM_PLANE);
+}
+
+void triangles_from_polygon(polygon_t* polygon, triangle_t triangles[], int* triangle_count) {
+    assert(polygon->vertex_count >= 3);
+
+    for (int idx = 0; idx != polygon->vertex_count - 2; ++idx) {
+        int index0 = 0;  // triangulate from the first point like a "fan" 
+        int index1 = idx + 1;
+        int index2 = idx + 2;
+
+        triangles[idx].points[0] = vec4_from_vec3(polygon->vertices[index0]);
+        triangles[idx].points[1] = vec4_from_vec3(polygon->vertices[index1]);
+        triangles[idx].points[2] = vec4_from_vec3(polygon->vertices[index2]);
+    } 
+
+    // this is some property, apparently.
+    *triangle_count = polygon->vertex_count - 2;
+}
+

@@ -30,7 +30,7 @@ vec2_t vec2_sub(vec2_t lhs, vec2_t rhs);
 float vec2_dot(vec2_t lhs, vec2_t rhs);
 void vec2_normalize(vec2_t* lhs);
 
-
+vec3_t vec3_clone(vec3_t* v);
 
 
 vec3_t vec3_new(float x, float y, float z);

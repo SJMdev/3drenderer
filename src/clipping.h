@@ -1,7 +1,7 @@
 #ifndef CLIPPING_H
 #define CLIPPING_H
 #include "vector.h"
-#include <stdbool.h>
+#include "triangle.h"
 
 enum {
     LEFT_FRUSTUM_PLANE,
@@ -17,8 +17,25 @@ typedef struct {
     vec3_t normal;
 } plane_t;
 
-void init_frustrum_planes(float fov, float z_near, float z_far);
 
-bool point_inside_plane(vec3_t point, plane_t plane);
+#define MAX_POLYGON_TRIANGLE_COUNT 10
+#define MAX_POLYGON_VERTEX_COUNT 10
+typedef struct {
+    vec3_t vertices[MAX_POLYGON_VERTEX_COUNT];
+    int vertex_count;
+} polygon_t;
+
+polygon_t create_polygon_from_triangle(
+    vec3_t v0,
+    vec3_t v1,
+    vec3_t v2
+);
+
+void  clip_polygon(polygon_t* polygon);
+
+
+void init_frustrum_planes(float fov, float z_near, float z_far);
+void triangles_from_polygon(polygon_t* polygon, triangle_t triangles[], int* triangle_count);
+
 
 #endif

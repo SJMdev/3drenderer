@@ -68,11 +68,11 @@ void setup() {
     // mesh_texture = (uint32_t*)REDBRICK_TEXTURE;
     // loads the cube values in the mesh data structure
     // load_cube_mesh_data();
-    // load_obj_file_data("assets/cube.obj");
-    // load_png_texture_data("./assets/cube_2.png");
+    load_obj_file_data("assets/cube.obj");
+    load_png_texture_data("./assets/cube_2.png");
 
-    load_obj_file_data("assets/f22.obj");
-    load_png_texture_data("./assets/f22.png");
+    // load_obj_file_data("assets/f22.obj");
+    // load_png_texture_data("./assets/f22.png");
 
     // load_obj_file_data("assets/drone.obj");
     // load_png_texture_data("./assets/drone.png");
@@ -235,6 +235,7 @@ void update() {
     int face_count = array_length(mesh.faces);
     // loop over faces
     for (int face_idx = 0; face_idx < face_count; ++face_idx) {
+        //@NOTE(SJM): for now, just do one triangle
         face_t mesh_face = mesh.faces[face_idx];
 
         vec3_t face_vertices[3];
@@ -246,6 +247,9 @@ void update() {
 
         // for all three vertices 
         for (int vertex_idx = 0; vertex_idx <3; ++vertex_idx){
+
+            
+
             vec4_t transformed_vertex = vec4_from_vec3(face_vertices[vertex_idx]);
 
             mat4_t world_matrix = mat4_identity();
@@ -287,55 +291,79 @@ void update() {
             continue;
         }
 
+        // create a polygon from the original transformed triangle to be clipped.
+        polygon_t polygon  = create_polygon_from_triangle(
+            vec3_from_vec4(transformed_vertices[0]),
+            vec3_from_vec4(transformed_vertices[1]),
+            vec3_from_vec4(transformed_vertices[2]));
 
-        vec4_t projected_points[3];
+        clip_polygon(&polygon);
 
-        for (int vertex_idx = 0; vertex_idx < 3; ++vertex_idx) {
-            vec4_t projected_point = mat4_mul_vec4_project(projection_matrix, transformed_vertices[vertex_idx]);
+        // break the clipped polygon apart back into individual triangles.
+        triangle_t triangles_after_clipping[MAX_POLYGON_VERTEX_COUNT];
+        int triangle_count_after_clipping = 0;
 
-            projected_points[vertex_idx] = projected_point;
-            // scale into the view.
-            projected_points[vertex_idx].x *= (window_width / 2.0);
-            projected_points[vertex_idx].y *= (window_height / 2.0);
-
-            // invert y, since screen space y is top -> bottom,
-            projected_points[vertex_idx].y *= -1;
-
-            // translate the projected points to the middle of the screen.
-            projected_points[vertex_idx].x += (window_width  / 2.0);
-            projected_points[vertex_idx].y += (window_height / 2.0);
-
-        }
-
-        //@NOTE(SJM): this is no longer necessary after introduction of z buffer
-        // calculate the average depth for each face based on the vertices after transformation.
-        // float average_depth = (transformed_vertices[0].z + transformed_vertices[1].z + transformed_vertices[2].z) / 3.0;
-
-        // calculate the triangle color based on the light angle
-        float light_intensity_vector = -vec3_dot(light.direction, normal);
+        // triangulate the polygon.
+        triangles_from_polygon(&polygon, triangles_after_clipping, &triangle_count_after_clipping);
         
+        printf("trianglecount after clipping: %d\n", triangle_count_after_clipping);
 
-        triangle_t projected_triangle= {
-            .points = {
-                {projected_points[0].x, projected_points[0].y,projected_points[0].z, projected_points[0].w},
-                {projected_points[1].x,  projected_points[1].y,projected_points[1].z, projected_points[1].w},
-                {projected_points[2].x,  projected_points[2].y,projected_points[2].z, projected_points[2].w},
-            },
-            .texcoords = {
-                {mesh_face.a_uv.u, mesh_face.a_uv.v},
-                {mesh_face.b_uv.u, mesh_face.b_uv.v},
-                {mesh_face.c_uv.u, mesh_face.c_uv.v}
-            },
-            .color = light_apply_intensity(mesh_face.color, light_intensity_vector)
-        };
 
-        // save the projected triangle in the array of triangles to render.
-        if (triangles_to_render_count < MAX_TRIANGLES_PER_MESH) {
-            triangles_to_render[triangles_to_render_count] = projected_triangle;
-            triangles_to_render_count += 1;
-        } else{
-            assert(false && "TOO MANY TRIANGLES!");
+        // loop over all the assembled triangles after clipping
+        for (int t = 0; t != triangle_count_after_clipping; ++t) {
+            triangle_t triangle_after_clipping = triangles_after_clipping[t];
+
+            vec4_t projected_points[3];
+
+            for (int vertex_idx = 0; vertex_idx < 3; ++vertex_idx) {
+                vec4_t projected_point = mat4_mul_vec4_project(projection_matrix, triangle_after_clipping.points[vertex_idx]);
+
+                projected_points[vertex_idx] = projected_point;
+                // scale into the view.
+                projected_points[vertex_idx].x *= (window_width / 2.0);
+                projected_points[vertex_idx].y *= (window_height / 2.0);
+
+                // invert y, since screen space y is top -> bottom,
+                projected_points[vertex_idx].y *= -1;
+
+                // translate the projected points to the middle of the screen.
+                projected_points[vertex_idx].x += (window_width  / 2.0);
+                projected_points[vertex_idx].y += (window_height / 2.0);
+
+            }
+
+            //@NOTE(SJM): this is no longer necessary after introduction of z buffer
+            // calculate the average depth for each face based on the vertices after transformation.
+            // float average_depth = (transformed_vertices[0].z + transformed_vertices[1].z + transformed_vertices[2].z) / 3.0;
+
+            // calculate the triangle color based on the light angle
+            float light_intensity_vector = -vec3_dot(light.direction, normal);
+
+            // ussed to be projected triangle.
+            triangle_t triangle_to_render= {
+                .points = {
+                    {projected_points[0].x,  projected_points[0].y,projected_points[0].z, projected_points[0].w},
+                    {projected_points[1].x,  projected_points[1].y,projected_points[1].z, projected_points[1].w},
+                    {projected_points[2].x,  projected_points[2].y,projected_points[2].z, projected_points[2].w},
+                },
+                .texcoords = {
+                    {mesh_face.a_uv.u, mesh_face.a_uv.v},
+                    {mesh_face.b_uv.u, mesh_face.b_uv.v},
+                    {mesh_face.c_uv.u, mesh_face.c_uv.v}
+                },
+                .color = light_apply_intensity(mesh_face.color, light_intensity_vector)
+            };
+
+            // save the projected triangle in the array of triangles to render.
+            if (triangles_to_render_count < MAX_TRIANGLES_PER_MESH) {
+                triangles_to_render[triangles_to_render_count] = triangle_to_render;
+                triangles_to_render_count += 1;
+            } else{
+                assert(false && "TOO MANY TRIANGLES!");
+            }
         }
+
+      
         
     }
 
