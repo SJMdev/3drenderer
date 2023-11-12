@@ -90,10 +90,41 @@ void process_input() {
         }
         case SDL_KEYDOWN:
         {
+            // basic program control
             if (event.key.keysym.sym == SDLK_ESCAPE){
                 is_running = false;
                 break;
             }
+
+            // fps movement
+            if (event.key.keysym.sym == SDLK_w) {
+                camera.forward_velocity = vec3_mul(camera.direction, 5.0 * delta_time);
+                camera.position = vec3_add(camera.position, camera.forward_velocity); 
+            };
+
+            if (event.key.keysym.sym == SDLK_s) {
+                camera.forward_velocity = vec3_mul(camera.direction, 5.0 * delta_time);
+                camera.position = vec3_sub(camera.position, camera.forward_velocity);
+            }
+
+            
+            if (event.key.keysym.sym == SDLK_a) {
+                camera.yaw -= 1.0 * delta_time;
+            }
+
+            if (event.key.keysym.sym == SDLK_d) {
+                camera.yaw += 1.0 * delta_time;
+            }
+
+            if (event.key.keysym.sym == SDLK_UP ){
+                camera.position.y += 3.0 * delta_time;
+            }
+
+            if (event.key.keysym.sym == SDLK_DOWN ){
+                camera.position.y -= 3.0 * delta_time;
+            }
+
+            // rendering modes.
 
             if (event.key.keysym.sym == SDLK_1) {
                 render_mode = RENDER_MODE_WIREFRAME_WITH_VERTICES;
@@ -159,9 +190,9 @@ void update() {
 
     // change the mesh scale /rotation values per animation frame.
     // 0.6 radians per second.
-    mesh.rotation.x += 0.6 * delta_time;
-    mesh.rotation.y += 0.6 * delta_time;
-    mesh.rotation.z += 0.6 * delta_time;
+    // mesh.rotation.x += 0.6 * delta_time;
+    // mesh.rotation.y += 0.6 * delta_time;
+    // mesh.rotation.z += 0.6 * delta_time;
 
     // mesh.scale.x += 0.0002;
     // mesh.scale.y += 0.0002;
@@ -169,11 +200,18 @@ void update() {
     // mesh.translation.x += 0.001;
     mesh.translation.z = 4.0;
 
-    // change the camera position per animation frame.
-    camera.position.x += 0.5 * delta_time;
-    camera.position.y += 0.8 * delta_time;;
-    vec3_t target = {0.0, 0.0, 4.0};
+    // coimpute the new  camera rotation and translation for the fps camera movement.
     vec3_t up_direction = {0.0, 1.0, 0.0};
+    // todo: find the target direction.
+
+    // initialize the target 
+    vec3_t target = {0.0,0.0,1.0};
+    mat4_t camera_yaw_rotation = mat4_make_rotation_y(camera.yaw);
+    camera.direction = vec3_from_vec4(mat4_mul_vec4(camera_yaw_rotation, vec4_from_vec3(target)));
+
+    // offset the camera position in the direction of where the camera is pointing at.
+    target = vec3_add(camera.position, camera.direction);
+
     view_matrix = mat4_look_at(camera.position, target, up_direction);
 
 
