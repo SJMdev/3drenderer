@@ -22,19 +22,23 @@ typedef struct {
 #define MAX_POLYGON_VERTEX_COUNT 10
 typedef struct {
     vec3_t vertices[MAX_POLYGON_VERTEX_COUNT];
+    tex2_t texcoords[MAX_POLYGON_VERTEX_COUNT];
     int vertex_count;
 } polygon_t;
 
 polygon_t create_polygon_from_triangle(
     vec3_t v0,
     vec3_t v1,
-    vec3_t v2
+    vec3_t v2,
+    tex2_t t0,
+    tex2_t t1,
+    tex2_t t2
 );
 
 void  clip_polygon(polygon_t* polygon);
 
 
-void init_frustrum_planes(float fov, float z_near, float z_far);
+void init_frustrum_planes(float fovx, float fovy, float z_near, float z_far);
 void triangles_from_polygon(polygon_t* polygon, triangle_t triangles[], int* triangle_count);
 
 

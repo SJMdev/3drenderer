@@ -104,8 +104,15 @@ void draw_pixel(int x, int y, uint32_t color) {
 }
 
 void draw_rect(int start_x, int start_y, int width, int height, uint32_t color) {
-    assert(start_y + height < window_height);
-    assert(start_x + width < window_width);
+    
+    if (start_y + height >= window_height) {
+        return;
+    }
+    if (start_x + width >= window_width) {
+        return;
+    }
+    // assert(start_y + height < window_height);
+    // assert(start_x + width < window_width);
 
     for (int y = start_y; y < start_y + height; ++y) {
         for (int x = start_x; x < start_x + width; ++x) {

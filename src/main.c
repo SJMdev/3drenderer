@@ -56,20 +56,22 @@ void setup() {
         window_width,
         window_height
     );
+    float aspect_ratio_y = (float)window_height / (float)window_width ;
+    float aspect_ratio_x = (float)window_width / (float)window_height ;
     
-    float fov = M_PI / 3.0; // the same as 180/3 (or 60 degrees).
-    float aspect_ratio = (float)window_height / (float)window_width ;
+    float fovy = M_PI / 3.0; // the same as 180/3 (or 60 degrees).
+    float fovx = atan(tan(fovy / 2) * aspect_ratio_x) * 2.0;
     float z_near = 0.1;
     float z_far = 100.0;
-    projection_matrix = mat4_make_perspective(fov, aspect_ratio, z_near, z_far);
-    init_frustrum_planes(fov, z_near, z_far);
+    projection_matrix = mat4_make_perspective(fovy, aspect_ratio_y, z_near, z_far);
+    init_frustrum_planes(fovx, fovy, z_near, z_far);
 
 
     // mesh_texture = (uint32_t*)REDBRICK_TEXTURE;
     // loads the cube values in the mesh data structure
     // load_cube_mesh_data();
-    load_obj_file_data("assets/cube.obj");
-    load_png_texture_data("./assets/cube_2.png");
+    load_obj_file_data("assets/f117.obj");
+    load_png_texture_data("./assets/f117.png");
 
     // load_obj_file_data("assets/f22.obj");
     // load_png_texture_data("./assets/f22.png");
@@ -295,7 +297,11 @@ void update() {
         polygon_t polygon  = create_polygon_from_triangle(
             vec3_from_vec4(transformed_vertices[0]),
             vec3_from_vec4(transformed_vertices[1]),
-            vec3_from_vec4(transformed_vertices[2]));
+            vec3_from_vec4(transformed_vertices[2]),
+            mesh_face.a_uv,
+            mesh_face.b_uv,
+            mesh_face.c_uv
+            );
 
         clip_polygon(&polygon);
 
@@ -305,9 +311,6 @@ void update() {
 
         // triangulate the polygon.
         triangles_from_polygon(&polygon, triangles_after_clipping, &triangle_count_after_clipping);
-        
-        printf("trianglecount after clipping: %d\n", triangle_count_after_clipping);
-
 
         // loop over all the assembled triangles after clipping
         for (int t = 0; t != triangle_count_after_clipping; ++t) {
@@ -347,9 +350,9 @@ void update() {
                     {projected_points[2].x,  projected_points[2].y,projected_points[2].z, projected_points[2].w},
                 },
                 .texcoords = {
-                    {mesh_face.a_uv.u, mesh_face.a_uv.v},
-                    {mesh_face.b_uv.u, mesh_face.b_uv.v},
-                    {mesh_face.c_uv.u, mesh_face.c_uv.v}
+                    {triangle_after_clipping.texcoords[0].u, triangle_after_clipping.texcoords[0].v},
+                    {triangle_after_clipping.texcoords[1].u, triangle_after_clipping.texcoords[1].v},
+                    {triangle_after_clipping.texcoords[2].u, triangle_after_clipping.texcoords[2].v}
                 },
                 .color = light_apply_intensity(mesh_face.color, light_intensity_vector)
             };
