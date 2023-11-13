@@ -68,12 +68,15 @@ bool initialize_window(void) {
     int max_window_width = display_mode.w;
     int max_window_height = display_mode.h;
 
+
+
     window_width = DEFAULT_WINDOW_WIDTH;
     window_height = DEFAULT_WINDOW_HEIGHT;
     if (is_fullscreen){
         window_width = max_window_width;
         window_height = max_window_height;
     }
+
     // create SDL window.
     window = SDL_CreateWindow(
         NULL,
@@ -83,6 +86,14 @@ bool initialize_window(void) {
         window_height,
         SDL_WINDOW_BORDERLESS
     );
+
+    //NOTE(SJM): is too late to understand  for me what happens here.
+    bool pixelated = false;
+    if (pixelated) {
+        window_width /= 3;
+        window_height /= 3;
+
+    }
 
     if (!window) {
         fprintf(stderr, "Error creating window.");
