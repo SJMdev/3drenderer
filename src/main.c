@@ -70,16 +70,16 @@ void setup() {
     // mesh_texture = (uint32_t*)REDBRICK_TEXTURE;
     // loads the cube values in the mesh data structure
     // load_cube_mesh_data();
-    load_obj_file_data("assets/f117.obj");
-    load_png_texture_data("./assets/f117.png");
+    // load_obj_file_data("assets/f117.obj");
+    // load_png_texture_data("./assets/f117.png");
 
     // load_obj_file_data("assets/f22.obj");
     // load_png_texture_data("./assets/f22.png");
 
     // load_obj_file_data("assets/drone.obj");
     // load_png_texture_data("./assets/drone.png");
-    // load_obj_file_data("assets/crab.obj");
-    // load_png_texture_data("assets/crab.png");
+    load_obj_file_data("assets/crab.obj");
+    load_png_texture_data("assets/crab.png");
 
 }
 
@@ -196,7 +196,7 @@ void update() {
     // change the mesh scale /rotation values per animation frame.
     // 0.6 radians per second.
     // mesh.rotation.x += 0.6 * delta_time;
-    // mesh.rotation.y += 0.6 * delta_time;
+    mesh.rotation.y += 0.6 * delta_time;
     // mesh.rotation.z += 0.6 * delta_time;
 
     // mesh.scale.x += 0.0002;

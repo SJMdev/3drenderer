@@ -210,6 +210,11 @@ void draw_texel(
     // adjust 1/w such that the pixels that are closer to the camera have smaller values.
     interpolated_reciprocal_w = 1.0 - interpolated_reciprocal_w;
 
+    if (x >= window_width || x < 0 || y >= window_height || y < 0) {
+        printf("wanted to draw out of bounds, forcing early return.\n");
+        return;
+    }
+
     // only the pixel if the depth value is less than the one previously stored in z-buffer. (less meaning closer to the camera,.
     // since z is into the screen.)
     if (interpolated_reciprocal_w < z_buffer[(y * window_width) +  x]) {
