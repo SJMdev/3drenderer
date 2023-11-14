@@ -38,12 +38,14 @@ float delta_time = 0;
 mat4_t projection_matrix;
 mat4_t view_matrix;
 
-light_t light = {.direction = {0.0, 0.0, 1.0}};
-
 void setup() {
+
 
     set_render_mode(RENDER_MODE_WIREFRAME);
     set_cull_mode(CULL_BACKFACE);
+
+    // initialize the scene light direction
+    init_light(vec3_new(0.0,0.0,1.0));
 
     float aspect_ratio_y = (float)get_window_height() / (float)get_window_width() ;
     float aspect_ratio_x = (float)get_window_width() / (float)get_window_height() ;
@@ -69,7 +71,6 @@ void setup() {
     // load_png_texture_data("./assets/drone.png");
     load_obj_file_data("assets/crab.obj");
     load_png_texture_data("assets/crab.png");
-
 }
 
 void process_input() {
@@ -91,39 +92,58 @@ void process_input() {
 
                 // fps movement
                 if (event.key.keysym.sym == SDLK_w) {
-                    camera.forward_velocity = vec3_mul(camera.direction, 5.0 * delta_time);
-                    camera.position = vec3_add(camera.position, camera.forward_velocity); 
+                    set_camera_forward_velocity(vec3_mul(get_camera_direction(), 5.0 * delta_time));
+                    set_camera_position(vec3_add(get_camera_position(), get_camera_forward_velocity())); 
                     break;
                 };
 
                 if (event.key.keysym.sym == SDLK_s) {
-                    camera.forward_velocity = vec3_mul(camera.direction, 5.0 * delta_time);
-                    camera.position = vec3_sub(camera.position, camera.forward_velocity);
+                    set_camera_forward_velocity(vec3_mul(get_camera_direction(), 5.0 * delta_time));
+                    set_camera_position(vec3_sub(get_camera_position(), get_camera_forward_velocity()));
                     break;
-
                 }
 
                 
+                if (event.key.keysym.sym == SDLK_r) {
+                    float pitch = get_camera_pitch();
+                    pitch = pitch + 3.0 * delta_time;
+                    set_camera_pitch(pitch);
+                    break;
+                }
+
+                if (event.key.keysym.sym == SDLK_f) {
+                    float pitch = get_camera_pitch();
+                    pitch = pitch - 3.0 * delta_time;
+                    set_camera_pitch(pitch);
+                    break;
+                }
+
+
+
                 if (event.key.keysym.sym == SDLK_a) {
-                    camera.yaw -= 1.0 * delta_time;
+                    set_camera_yaw(get_camera_yaw() - 1.0 * delta_time);
                     break;
 
                 }
 
                 if (event.key.keysym.sym == SDLK_d) {
-                    camera.yaw += 1.0 * delta_time;
+                    set_camera_yaw(get_camera_yaw() + 1.0 * delta_time);
                     break;
 
                 }
 
                 if (event.key.keysym.sym == SDLK_UP ){
-                    camera.position.y += 3.0 * delta_time;
+                    vec3_t camera_position = get_camera_position();
+                    camera_position.y = camera_position.y + 3.0 * delta_time;
+                    set_camera_position(camera_position);
                     break;
 
                 }
 
                 if (event.key.keysym.sym == SDLK_DOWN ){
-                    camera.position.y -= 3.0 * delta_time;
+                    vec3_t camera_position = get_camera_position();
+                    camera_position.y = camera_position.y - 3.0 * delta_time;
+                    set_camera_position(camera_position);
                     break;
 
                 }
@@ -220,21 +240,27 @@ void update() {
     // mesh.translation.x += 0.001;
     mesh.translation.z = 4.0;
 
-    // coimpute the new  camera rotation and translation for the fps camera movement.
+    // compute the new  camera rotation and translation for the fps camera movement.
     vec3_t up_direction = {0.0, 1.0, 0.0};
     // todo: find the target direction.
 
     // initialize the target 
     vec3_t target = {0.0,0.0,1.0};
-    mat4_t camera_yaw_rotation = mat4_make_rotation_y(camera.yaw);
-    camera.direction = vec3_from_vec4(mat4_mul_vec4(camera_yaw_rotation, vec4_from_vec3(target)));
 
+    mat4_t camera_rotation = mat4_identity();
+
+    mat4_t camera_pitch_rotation = mat4_make_rotation_x(get_camera_pitch());
+    mat4_t camera_yaw_rotation = mat4_make_rotation_y(get_camera_yaw());
+
+
+    camera_rotation = mat4_mul_mat4(camera_pitch_rotation,camera_rotation);
+    camera_rotation = mat4_mul_mat4(camera_yaw_rotation, camera_rotation);
+
+    set_camera_direction(vec3_from_vec4(mat4_mul_vec4(camera_rotation, vec4_from_vec3(target))));
     // offset the camera position in the direction of where the camera is pointing at.
-    target = vec3_add(camera.position, camera.direction);
+    target = vec3_add(get_camera_position(), get_camera_direction());
 
-    view_matrix = mat4_look_at(camera.position, target, up_direction);
-
-
+    view_matrix = mat4_look_at(get_camera_position(), target, up_direction);
 
     mat4_t translation_matrix = mat4_make_translate(mesh.translation.x, mesh.translation.y, mesh.translation.z);
     mat4_t scale_matrix = mat4_make_scale(mesh.scale.x, mesh.scale.y, mesh.scale.z);
@@ -355,7 +381,7 @@ void update() {
             // float average_depth = (transformed_vertices[0].z + transformed_vertices[1].z + transformed_vertices[2].z) / 3.0;
 
             // calculate the triangle color based on the light angle
-            float light_intensity_vector = -vec3_dot(light.direction, normal);
+            float light_intensity_vector = -vec3_dot(normal, get_light_direction());
 
             // ussed to be projected triangle.
             triangle_t triangle_to_render= {
