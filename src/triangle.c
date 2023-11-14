@@ -169,7 +169,7 @@ void draw_filled_triangle(
 void draw_texel(
     int x,
     int y,
-    uint32_t* texture,
+    upng_t* texture,
     vec4_t point_a,
     vec4_t point_b,
     vec4_t point_c,
@@ -187,7 +187,7 @@ void draw_texel(
     float beta =  weights.y;
     float gamma = weights.z;
 
-    // variazble sto store the interpolated values of U,v, and also 1/W for the current pixel.
+    // variables to store the interpolated values of U,v, and also 1/W (z before projection) for the current pixel.
     float interpolated_u = 0;
     float interpolated_v = 0;
     float interpolated_reciprocal_w = 0;
@@ -202,6 +202,9 @@ void draw_texel(
     // now we can divide back both interpolated values by 1/w .
     interpolated_u /= interpolated_reciprocal_w;
     interpolated_v /= interpolated_reciprocal_w;
+
+    int texture_width  = upng_get_width(texture);
+    int texture_height = upng_get_height(texture);
 
     // modulo so we do not have invalid values (not really clamping, but rolling over.)
     int tex_x = abs((int)(interpolated_u * texture_width)) % texture_width;
@@ -218,7 +221,9 @@ void draw_texel(
     // only the pixel if the depth value is less than the one previously stored in z-buffer. (less meaning closer to the camera,.
     // since z is into the screen.)
     if (interpolated_reciprocal_w < get_zbuffer_at(x, y)) {
-        draw_pixel(x,y, texture[(texture_width * tex_y) + tex_x]);
+        // get the buffer of colors from the t4exture.
+        uint32_t* texture_buffer = (uint32_t*)upng_get_buffer(texture);
+        draw_pixel(x,y, texture_buffer[(texture_width * tex_y) + tex_x]);
         update_zbuffer_at(x,y, interpolated_reciprocal_w);
     }
 
@@ -231,9 +236,9 @@ void draw_texel(
 void draw_textured_triangle(int x0, int y0, float z0, float w0, float u0, float v0,
                             int x1, int y1, float z1, float w1, float u1, float v1,
                             int x2, int y2, float z2, float w2, float u2, float v2,
-                            uint32_t* texture) {    
+                            upng_t* texture) {    
                             
-    // TODO: loop over all the pixels of the triangle to render them based on  the color
+    // loop over all the pixels of the triangle to render them based on the color
     // that is sampled from the texture.
     // we need to sort vertices by y coordinate ascending (y0 < y1 < y2)
     if (y0 > y1) {
@@ -354,3 +359,22 @@ void draw_textured_triangle(int x0, int y0, float z0, float w0, float u0, float 
         }
     }
 }
+
+vec3_t get_triangle_normal(vec4_t vertices[3]) {
+    vec3_t a = vec3_from_vec4(vertices[0]);
+    vec3_t b = vec3_from_vec4(vertices[1]);
+    vec3_t c = vec3_from_vec4(vertices[2]);
+
+    vec3_t b_minus_a = vec3_sub(b, a);
+    vec3_t c_minus_a = vec3_sub(c, a);
+    vec3_normalize(&b_minus_a);
+    vec3_normalize(&c_minus_a);
+
+    // calculate the normal of the face
+    vec3_t normal = vec3_cross(b_minus_a, c_minus_a);
+    // normalize the normal
+    vec3_normalize(&normal);
+    
+    return normal;
+}
+

@@ -3,66 +3,55 @@
 #include "array.h"
 #include "texture.h"
 
-mesh_t mesh = {
-    .vertices = NULL,
-    .faces = NULL,
-    .rotation = {0,0,0},
-    .scale = {1.0,1.0,1.0},
-    .translation = {0,0,0}
-};
+#define MAX_MESH_COUNT 10
+static mesh_t meshes[MAX_MESH_COUNT];
+static int active_mesh_count = 0;
 
-vec3_t cube_vertices[CUBE_VERTICES_COUNT] = {
-    { .x = -1, .y = -1, .z = -1 }, // 1
-    { .x = -1, .y =  1, .z = -1 }, // 2
-    { .x =  1, .y =  1, .z = -1 }, // 3
-    { .x =  1, .y = -1, .z = -1 }, // 4
-    { .x =  1, .y =  1, .z =  1 }, // 5
-    { .x =  1, .y = -1, .z =  1 }, // 6
-    { .x = -1, .y =  1, .z =  1 }, // 7
-    { .x = -1, .y = -1, .z =  1 }  // 8
-};
+int get_mesh_count(void) {
+    return active_mesh_count;
+}
 
-face_t cube_faces[CUBE_FACES_COUNT] = {
- // front
-    { .a = 1, .b = 2, .c = 3, .a_uv = { 0, 1 }, .b_uv = { 0, 0 }, .c_uv = { 1, 0 }, .color = 0xFFFFFFFF },
-    { .a = 1, .b = 3, .c = 4, .a_uv = { 0, 1 }, .b_uv = { 1, 0 }, .c_uv = { 1, 1 }, .color = 0xFFFFFFFF },
-    // right
-    { .a = 4, .b = 3, .c = 5, .a_uv = { 0, 1 }, .b_uv = { 0, 0 }, .c_uv = { 1, 0 }, .color = 0xFFFFFFFF },
-    { .a = 4, .b = 5, .c = 6, .a_uv = { 0, 1 }, .b_uv = { 1, 0 }, .c_uv = { 1, 1 }, .color = 0xFFFFFFFF },
-    // back
-    { .a = 6, .b = 5, .c = 7, .a_uv = { 0, 1 }, .b_uv = { 0, 0 }, .c_uv = { 1, 0 }, .color = 0xFFFFFFFF },
-    { .a = 6, .b = 7, .c = 8, .a_uv = { 0, 1 }, .b_uv = { 1, 0 }, .c_uv = { 1, 1 }, .color = 0xFFFFFFFF },
-    // left
-    { .a = 8, .b = 7, .c = 2, .a_uv = { 0, 1 }, .b_uv = { 0, 0 }, .c_uv = { 1, 0 }, .color = 0xFFFFFFFF },
-    { .a = 8, .b = 2, .c = 1, .a_uv = { 0, 1 }, .b_uv = { 1, 0 }, .c_uv = { 1, 1 }, .color = 0xFFFFFFFF },
-    // top
-    { .a = 2, .b = 7, .c = 5, .a_uv = { 0, 1 }, .b_uv = { 0, 0 }, .c_uv = { 1, 0 }, .color = 0xFFFFFFFF },
-    { .a = 2, .b = 5, .c = 3, .a_uv = { 0, 1 }, .b_uv = { 1, 0 }, .c_uv = { 1, 1 }, .color = 0xFFFFFFFF },
-    // bottom
-    { .a = 6, .b = 8, .c = 1, .a_uv = { 0, 1 }, .b_uv = { 0, 0 }, .c_uv = { 1, 0 }, .color = 0xFFFFFFFF },
-    { .a = 6, .b = 1, .c = 4, .a_uv = { 0, 1 }, .b_uv = { 1, 0 }, .c_uv = { 1, 1 }, .color = 0xFFFFFFFF }
-};
+mesh_t* get_mesh(int idx) {
+    return &meshes[idx];
+}
 
-void load_cube_mesh_data(void) {
-    for (int idx = 0; idx != CUBE_VERTICES_COUNT; ++idx) {
-        array_push(mesh.vertices, cube_vertices[idx]);
-    }
+void load_mesh(char* obj_filename, char* png_filename, vec3_t scale, vec3_t translation, vec3_t rotation) {
+    // load the png file information to mesh texture
+    // initialize scale, translation and rotation 
+    mesh_t* mesh = &meshes[active_mesh_count];
+    // load the obj file to our mesh
+    load_mesh_obj_data(obj_filename, mesh);
+    load_mesh_png_data(png_filename, mesh);
 
-    for (int idx = 0; idx != CUBE_FACES_COUNT; ++idx) {
-        array_push(mesh.faces, cube_faces[idx]);
+    mesh->scale = scale;
+    mesh->translation = translation;
+    mesh->rotation = rotation;
+
+    active_mesh_count += 1;
+
+}
+
+void load_mesh_png_data(char* filename, mesh_t* mesh) {
+    upng_t* png_image = upng_new_from_file(filename);
+    if (png_image != NULL) {
+        upng_decode(png_image);
+        if (upng_get_error(png_image) == UPNG_EOK) {
+            mesh->texture = png_image;
+        } 
     }
 }
-void load_obj_file_data(char* filename) {
+
+void load_mesh_obj_data(char* obj_filename, mesh_t* mesh) {
     // todo: read the contents of the obj file
     // and load the vertices and faces in our mesh.vertices and mesh.faces
     FILE *file;
 
     // Open the file for reading
-    file = fopen(filename, "r");
+    file = fopen(obj_filename, "r");
 
     // Check if the file was opened successfully
     if (file == NULL) {
-        printf("Unable to open the file %s. \n", filename);
+        printf("Unable to open the file %s. \n", obj_filename);
         return;
     }
 
@@ -85,7 +74,7 @@ void load_obj_file_data(char* filename) {
         if (sscanf(line, "v %f %f %f", &position.x, &position.y, &position.z) == 3) {
             // Process the parsed data
             printf("x: %f, y: %f, z: %f\n", position.x, position.y, position.z);
-            array_push(mesh.vertices, position);
+            array_push(mesh->vertices, position);
 
         } else if (sscanf(line, "vt %f %f", &vertex_uv.u,  &vertex_uv.v) == 2) {
             array_push(texture_coordinates, vertex_uv);
@@ -116,7 +105,7 @@ void load_obj_file_data(char* filename) {
             face.color = 0xFFFFFFFF;
 
 
-            array_push(mesh.faces, face);
+            array_push(mesh->faces, face);
 
 
         } else {
@@ -127,4 +116,14 @@ void load_obj_file_data(char* filename) {
 
     // Close the file
     fclose(file);
+}
+
+void free_meshes(void) {
+
+    for (int mesh_idx = 0; mesh_idx != active_mesh_count; ++mesh_idx) {
+        upng_free(meshes[mesh_idx].texture);
+        array_free(meshes[mesh_idx].faces);
+        array_free(meshes[mesh_idx].vertices);
+    }
+    
 }
